@@ -5,13 +5,8 @@
 
 \import{jms-001M}
 
-
 \p{Let #{A} be a dcpo; then the lift #{\Lift{A}} is [positively generated](jms-0023).}
 
-\p{
-% start-env not supported
-
-Let #{u=\prn{\phi,a}} be an element of #{\Lift{A}}. Note that #{u} is equal to #{\bigsqcup_{p:\phi}u}; as [definedness coincides with positivity](jms-001N) in lifted dcpos, we have #{\phi = \IsPos\,u}, and so we are done.
-
-% stop-env not supported
+\proof{
+  \p{Let #{u=\prn{\phi,a}} be an element of #{\Lift{A}}. Note that #{u} is equal to #{\bigsqcup_{p:\phi}u}; as [definedness coincides with positivity](jms-001N) in lifted dcpos, we have #{\phi = \IsPos\,u}, and so we are done.}
 }

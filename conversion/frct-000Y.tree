@@ -9,10 +9,8 @@
 
 \p{The [externalization](frct-001R) is locally small.}
 
-\p{
-% start-env not supported
-
-Fix #{x\in E} and #{u,v\in \Extrn{C}\Sub{x}}, we must exhibit a terminal object to the (total) category #{\TotCat{\CandHom{\Extrn{C}\Sub{x}}{u}{v}}} of [“hom candidates”](frct-000I). First we define #{\brk{u,v}} to be the following pullback in #{E}:}
+\proof{
+\p{Fix #{x\in E} and #{u,v\in \Extrn{C}\Sub{x}}, we must exhibit a terminal object to the (total) category #{\TotCat{\CandHom{\Extrn{C}\Sub{x}}{u}{v}}} of [“hom candidates”](frct-000I). First we define #{\brk{u,v}} to be the following pullback in #{E}:}
 
 \tex{
   \DiagramSquare{
@@ -195,7 +193,5 @@ exists. We define #{\bar\alpha} using the universal property of the cartesian li
 
 \p{That #{\bar{\alpha}:\bar{h}\DispTo{\alpha}\InvImg{\brk{u,v}}u} is cartesian follows from [the generalized pullback lemma for cartesian morphisms](frct-0014): it suffices
 to observe that both #{\bar{p}\Sub{h}:\bar{h}\to u} and its second factor
-#{\bar{p}:\InvImg{\brk{u,v}}u\to u} are cartesian.
-
-% stop-env not supported
+#{\bar{p}:\InvImg{\brk{u,v}}u\to u} are cartesian.}
 }

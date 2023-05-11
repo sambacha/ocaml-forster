@@ -31,36 +31,31 @@
   \end{tikzpicture}
 }
 
-\p{
-% start-env not supported
+\proof{
+  \p{We fix #{\prn{\phi,a^+}: \Lift{A^+}} and compute explicitly using the fact that #{\Purify_A} preserves the bottom element and therefore preserves semidirected subsets:}
 
-We fix #{\prn{\phi,a^+}: \Lift{A^+}} and compute explicitly using the fact that #{\Purify_A} preserves the bottom element and therefore preserves semidirected subsets:}
-
-##{\begin{aligned}
-  \Purify_A\prn{\alpha_A\prn{\Lift{\iota^+}\prn{\phi,a^+}}} & =
-  \Purify_A\prn{\alpha_A\prn{\phi,a^+}}
-  \\
-                                                            & = \Purify_A\bigsqcup_{p:\phi} a^+p
-  \\
-                                                            & = \bigsqcup_{p:\phi} \Purify_A\prn{a^+p}
-  \\
-                                                            & = \bigsqcup_{p:\phi} \bigsqcup_{q:\IsPos\prn{a^+p}} a^+p
-  \\
-                                                            & =
-  \bigsqcup_{p:\phi} a^+p
-  \\
-                                                            & =
-  \prn{\phi,a^+}
-\end{aligned}
-}
+  ##{\begin{aligned}
+    \Purify_A\prn{\alpha_A\prn{\Lift{\iota^+}\prn{\phi,a^+}}} & =
+    \Purify_A\prn{\alpha_A\prn{\phi,a^+}}
+    \\
+                                                              & = \Purify_A\bigsqcup_{p:\phi} a^+p
+    \\
+                                                              & = \bigsqcup_{p:\phi} \Purify_A\prn{a^+p}
+    \\
+                                                              & = \bigsqcup_{p:\phi} \bigsqcup_{q:\IsPos\prn{a^+p}} a^+p
+    \\
+                                                              & =
+    \bigsqcup_{p:\phi} a^+p
+    \\
+                                                              & =
+    \prn{\phi,a^+}
+  \end{aligned}
+  }
 
 
-\p{For the deflation, we fix #{a:A} and observe that
-#{
-\alpha_A\prn{\Lift{\iota^+}\prn{\Purify_A a}} =
-\bigsqcup_{p:\IsPos\,a} a
-} which is evidently below #{a}.}
-
-\p{
-  % stop-env not supported
+  \p{For the deflation, we fix #{a:A} and observe that
+  #{
+  \alpha_A\prn{\Lift{\iota^+}\prn{\Purify_A a}} =
+  \bigsqcup_{p:\IsPos\,a} a
+  } which is evidently below #{a}.}
 }

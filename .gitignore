@@ -1,6 +1,9 @@
 node_modules
 build
 output
+*.bak0
+*.bak1
+*.log
 
 # -*- mode: gitignore; -*-
 *.install

@@ -8,10 +8,6 @@
 
 \p{Let #{A} be a dcpo; then the lifting #{\Lift{A}} has an [open positivity predicate](jms-0022).}
 
-\p{
-  % start-env not supported
-
-  It [suffices](jms-0027) to recall that a [lifted dcpo is positively generated](jms-0025).
-
-  % stop-env not supported
+\proof{
+  \p{It [suffices](jms-0027) to recall that a [lifted dcpo is positively generated](jms-0025).}
 }

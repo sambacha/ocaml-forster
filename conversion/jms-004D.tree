@@ -8,23 +8,18 @@
 
 \p{The following are equivalent for a deductive system #{\mathcal{D}}:}
 \ol{
-\li{every map is [linear](jms-004A);}
-\li{every map is [thunkable](jms-004A);}
-\li{every object is [positive](jms-004B);}
-\li{every object is [negative](jms-004B);}
-\li{the \strong{cut} law is associative;}
-\li{#{\mathcal{D}} is a precategory.}
+  \li{every map is [linear](jms-004A);}
+  \li{every map is [thunkable](jms-004A);}
+  \li{every object is [positive](jms-004B);}
+  \li{every object is [negative](jms-004B);}
+  \li{the \strong{cut} law is associative;}
+  \li{#{\mathcal{D}} is a precategory.}
 }
 
+\proof{
+  \p{Supposing that every map is linear, we must check that each #{f:A\vdash B} is thunkable. Fixing #{g:B\vdash C} and #{h:C\vdash D}, we must check that #{f;\prn{g;h} = \prn{f;g};h}; as #{h} is assumed linear, the equation holds. The converse holds by identical reasoning.}
 
-\p{
-% start-env not supported
+  \p{Clearly every object is positive if and only if every map is linear; likewise, every object is negative if and only if every map is thunkable.}
 
-Supposing that every map is linear, we must check that each #{f:A\vdash B} is thunkable. Fixing #{g:B\vdash C} and #{h:C\vdash D}, we must check that #{f;\prn{g;h} = \prn{f;g};h}; as #{h} is assumed linear, the equation holds. The converse holds by identical reasoning.}
-
-\p{Clearly every object is positive if and only if every map is linear; likewise, every object is negative if and only if every map is thunkable.}
-
-\p{Finally, when every map is both linear and thunkable, the cut law is associative — but this is exactly the condition that the deductive system give rise to a precategory.
-
-  % stop-env not supported
+  \p{Finally, when every map is both linear and thunkable, the cut law is associative — but this is exactly the condition that the deductive system give rise to a precategory.}
 }

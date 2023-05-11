@@ -7,10 +7,6 @@
 
 \p{Let #{A} be a pointed continuous dcpo presented by a basis #{B\subseteq A} whose elements are all [positively generated](jms-002F) in #{A}. Then #{A} is [positively generated](jms-0023).}
 
-\p{
-% start-env not supported
-
-As [positive generation implies non-negative generation](jms-002N) for an element of a pointed dcpo, we [may conclude](jms-0026) that #{A} is positively generated.
-
-% stop-env not supported
+\proof{
+  \p{As [positive generation implies non-negative generation](jms-002N) for an element of a pointed dcpo, we [may conclude](jms-0026) that #{A} is positively generated.}
 }

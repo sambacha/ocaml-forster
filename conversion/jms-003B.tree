@@ -11,10 +11,6 @@
 
 \p{(Our proof will follow that of the [nLab](https://ncatlab.org/nlab/show/initial+object#cone), which was stated for ordinary categories and functors and natural transformations rather than wild ones. It was [Mike Shulman](mikeshulman) who [noticed](https://homotopytypetheory.org/2018/11/26/impredicative-encodings-part-3/) who noticed that this proof also works for the wild/incoherent notions studied here.)}
 
-\p{
-% start-env not supported
-
-To show that #{\Hom{\CCat}{I}{A}} is contractible, we choose #{\alpha_{A} : \Hom{\CCat}{I}{A}} as the center of contraction. To identify any #{f : \Hom{\CCat}{I}{A}} with #{\alpha_{A}}, we use the [wild naturality](jms-0039) of #{\Mor{\alpha}{\Delta I}{\Idn{\CCat}}}. In particular, we have an identification #{\alpha_f} between #{\alpha_I;f} and #{\Idn{I};\alpha_A}. By our assumption that #{\alpha_I=\Idn{I}} and using the [wild left-unit](jms-0037) identifications #{\lambda f} and #{\lambda \alpha_A}, we may identify #{f} with #{\alpha_A}.
-
-% stop-env not supported
+\proof{
+  \p{To show that #{\Hom{\CCat}{I}{A}} is contractible, we choose #{\alpha_{A} : \Hom{\CCat}{I}{A}} as the center of contraction. To identify any #{f : \Hom{\CCat}{I}{A}} with #{\alpha_{A}}, we use the [wild naturality](jms-0039) of #{\Mor{\alpha}{\Delta I}{\Idn{\CCat}}}. In particular, we have an identification #{\alpha_f} between #{\alpha_I;f} and #{\Idn{I};\alpha_A}. By our assumption that #{\alpha_I=\Idn{I}} and using the [wild left-unit](jms-0037) identifications #{\lambda f} and #{\lambda \alpha_A}, we may identify #{f} with #{\alpha_A}.}
 }

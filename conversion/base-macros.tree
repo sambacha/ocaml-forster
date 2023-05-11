@@ -1,8 +1,13 @@
 \title{Basic macros}
 
 \def\proof[body]{
-  \block{\b{Proof.}}{\body}
+  \block{\b{Proof}.}{\body}
 }
+
+\def\labeled-proof[lbl][body]{
+  \block{\b{Proof} (\lbl).}{\body}
+}
+
 \def\Con[arg1]{\mathsf{\arg1}}
 \def\BoldSymbol[arg1]{\boldsymbol{\arg1}}
 \def\prn[arg1]{{\left(\arg1\right)}}
