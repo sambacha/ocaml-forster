@@ -7,6 +7,6 @@
 
 \p{The \em{extent} of a [tree within a forest](tfmt-000R) is the smallest set of trees closed under the following rules:}
 \ol{
-\li{#{T} lies within the extent of #{T}.}
-\li{If #{S} is transcluded by #{T}, then any tree in the extent of #{S} lies also in the extent of #{T}.}
+  \li{#{T} lies within the extent of #{T}.}
+  \li{If #{S} is transcluded by #{T}, then any tree in the extent of #{S} lies also in the extent of #{T}.}
 }

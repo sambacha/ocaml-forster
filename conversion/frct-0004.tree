@@ -5,15 +5,9 @@
 
 \p{Let #{E} be displayed over #{B} and let #{F} be displayed over #{C}. If #{\Mor{U}{B}{C}} is an ordinary functor, than a \em{displayed functor} from #{E} to #{F} over #{U} is given by the following data:}
 \ol{
-\li{
-
-\p{for each displayed object #{\bar{x}\in E\Sub{x}}, a displayed object #{\bar{U}\bar{x}\in F\Sub{Ux}},}}
-\li{
-
-\p{for each displayed morphism #{\DispMor{\bar{f}}{f}{\bar{x}}{\bar{y}}}, a displayed morphism #{\DispMor{\bar{U}\bar{f}}{Uf}{\bar{U}\bar{x}}{\bar{U}\bar{y}}},}}
-\li{
-
-\p{such that the assignment #{\bar{U}f} preserves displayed identities and displayed composition.}}
+  \li{for each displayed object #{\bar{x}\in E\Sub{x}}, a displayed object #{\bar{U}\bar{x}\in F\Sub{Ux}},}
+  \li{for each displayed morphism #{\DispMor{\bar{f}}{f}{\bar{x}}{\bar{y}}}, a displayed morphism #{\DispMor{\bar{U}\bar{f}}{Uf}{\bar{U}\bar{x}}{\bar{U}\bar{y}}},}
+  \li{such that the assignment #{\bar{U}f} preserves displayed identities and displayed composition.}
 }
 
 

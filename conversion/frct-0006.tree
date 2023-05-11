@@ -7,14 +7,9 @@
 
 \p{Any ordinary category #{C} can be viewed as a displayed category #{\FAM{C}} over #{\SET}:}
 \ol{
-\li{
-
-\p{For #{S\in \SET}, an object in #{\FAM{C}[S]} is specified by a functor #{C^S} where #{S} is regarded as a discrete category.}}
-\li{
-
-\p{Given #{f : S \to T} in #{\SET} and #{x\in C^S} and #{y\in C^T}, a morphism #{x \DispTo{f} y} is given by a morphism #{x\to \InvImg{f}y} in #{C^S} where #{\Mor{\InvImg{f}}{C^T}{C^S}} is precomposition with #{f}.}}
+  \li{For #{S\in \SET}, an object in #{\FAM{C}[S]} is specified by a functor #{C^S} where #{S} is regarded as a discrete category.}
+  \li{Given #{f : S \to T} in #{\SET} and #{x\in C^S} and #{y\in C^T}, a morphism #{x \DispTo{f} y} is given by a morphism #{x\to \InvImg{f}y} in #{C^S} where #{\Mor{\InvImg{f}}{C^T}{C^S}} is precomposition with #{f}.}
 }
-
 
 \p{The displayed category #{\FAM{C}} is in fact a cartesian fibration. This family fibration is the starting point for developing a \em{relative} form of category theory, the purpose of this lecture. By analogy with viewing an ordinary category #{C} as a fibration #{\FAM{C}} over #{\SET}, we may reasonably define a “relative category” over another base #{B} to be a fibration over #{B}.}
 

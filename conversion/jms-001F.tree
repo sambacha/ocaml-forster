@@ -106,64 +106,63 @@
 
   \p{Using the universal property of the co-comma squares for each #{\Lift{A_i}}, it suffices to check that two diagrams commute:}
   \ol{
-  \li{
+    \li{
+      \p{We must check that the outer triangle below commutes:}
 
-  \p{We must check that the outer triangle below commutes:}
+      \tex{
+        \begin{tikzpicture}[diagram]
+          \node (nww) {$\brc{\ObjTerm{}}$};
+          \node[right = of nww] (nw) {$LA_\bullet$};
+          \node[right = of nw] (ne) {$\brc{\Lift{A_\infty}}$};
+          \node[below = of ne] (se) {$\brc{D}$};
+          \draw[->] (ne) to node[right] {$\brc{h}$} (se);
+          \draw[->] (nw) to node[sloped,below] {$d_\bullet$} (se);
+          \draw[->] (nw) to node[above] {$\Lift{\iota_\bullet}$} (ne);
+          \draw[embedding] (nww) to node[above] {$\bot$} (nw);
+        \end{tikzpicture}
+      }
 
-  \tex{
-    \begin{tikzpicture}[diagram]
-      \node (nww) {$\brc{\ObjTerm{}}$};
-      \node[right = of nww] (nw) {$LA_\bullet$};
-      \node[right = of nw] (ne) {$\brc{\Lift{A_\infty}}$};
-      \node[below = of ne] (se) {$\brc{D}$};
-      \draw[->] (ne) to node[right] {$\brc{h}$} (se);
-      \draw[->] (nw) to node[sloped,below] {$d_\bullet$} (se);
-      \draw[->] (nw) to node[above] {$\Lift{\iota_\bullet}$} (ne);
-      \draw[embedding] (nww) to node[above] {$\bot$} (nw);
-    \end{tikzpicture}
-  }
+      \p{Rewriting using the strictness of lifted morphisms, this amounts to the established fact that #{h\bot = h_\bot}.}
+    }
+    
+    \li{
+      \p{We must check that the outer triangle below commutes:}
 
-  \p{Rewriting using the strictness of lifted morphisms, this amounts to the established fact that #{h\bot = h_\bot}.}}
-  \li{
+      \tex{
+        \begin{tikzpicture}[diagram]
+          \node (nww) {$A_\bullet$};
+          \node[right = of nww] (nw) {$LA_\bullet$};
+          \node[right = of nw] (ne) {$\brc{\Lift{A_\infty}}$};
+          \node[below = of ne] (se) {$\brc{D}$};
+          \draw[->] (ne) to node[right] {$\brc{h}$} (se);
+          \draw[->] (nw) to node[sloped,below] {$d_\bullet$} (se);
+          \draw[->] (nw) to node[above] {$\Lift{\iota_\bullet}$} (ne);
+          \draw[embedding] (nww) to node[above] {$\eta\Sub{A_\bullet}$} (nw);
+        \end{tikzpicture}
+      }
 
-    \p{We must check that the outer triangle below commutes:}
+      \p{Rewriting with established equations, it suffices to observe that the outer diagram below commutes:}
 
-    \tex{
-      \begin{tikzpicture}[diagram]
-        \node (nww) {$A_\bullet$};
-        \node[right = of nww] (nw) {$LA_\bullet$};
-        \node[right = of nw] (ne) {$\brc{\Lift{A_\infty}}$};
-        \node[below = of ne] (se) {$\brc{D}$};
-        \draw[->] (ne) to node[right] {$\brc{h}$} (se);
-        \draw[->] (nw) to node[sloped,below] {$d_\bullet$} (se);
-        \draw[->] (nw) to node[above] {$\Lift{\iota_\bullet}$} (ne);
-        \draw[embedding] (nww) to node[above] {$\eta\Sub{A_\bullet}$} (nw);
-      \end{tikzpicture}
+      \tex{
+        \begin{tikzpicture}[diagram]
+          \node (nww) {$A_\bullet$};
+          \node[below = of nww] (sww) {$\brc{A_\infty}$};
+          \node[right = 2.5cm of nww] (nw) {$LA_\bullet$};
+          \node[right = 2.5cm of nw] (ne) {$\brc{\Lift{A_\infty}}$};
+          \node[below = of ne] (se) {$\brc{D}$};
+          \draw[->] (ne) to node[right] {$\brc{h}$} (se);
+          \draw[->,gray] (nw) to node[sloped,below] {$d_\bullet$} (se);
+          \draw[->,gray] (nw) to node[upright desc,] {$\Lift{\iota_\bullet}$} (ne);
+          \draw[embedding,gray] (nww) to node[upright desc,] {$\eta\Sub{A_\bullet}$} (nw);
+          \draw[->] (nww) to node[left] {$\iota\Sub{\bullet}$} (sww);
+          \draw[->] (sww) to node[below] {$h\Sub{A_\infty}$} (se);
+          \node[above = of nw] (nnw) {$\brc{A_\infty}$};
+          \draw[->] (nww) to node[sloped,above] {$\iota_\bullet$} (nnw);
+          \draw[->] (nnw) to node[sloped,above] {$\brc{\eta\Sub{A_\infty}}$} (ne);
+        \end{tikzpicture}
+      }
     }
 
-    \p{Rewriting with established equations, it suffices to observe that the outer diagram below commutes:}
-
-    \tex{
-      \begin{tikzpicture}[diagram]
-        \node (nww) {$A_\bullet$};
-        \node[below = of nww] (sww) {$\brc{A_\infty}$};
-        \node[right = 2.5cm of nww] (nw) {$LA_\bullet$};
-        \node[right = 2.5cm of nw] (ne) {$\brc{\Lift{A_\infty}}$};
-        \node[below = of ne] (se) {$\brc{D}$};
-        \draw[->] (ne) to node[right] {$\brc{h}$} (se);
-        \draw[->,gray] (nw) to node[sloped,below] {$d_\bullet$} (se);
-        \draw[->,gray] (nw) to node[upright desc,] {$\Lift{\iota_\bullet}$} (ne);
-        \draw[embedding,gray] (nww) to node[upright desc,] {$\eta\Sub{A_\bullet}$} (nw);
-        \draw[->] (nww) to node[left] {$\iota\Sub{\bullet}$} (sww);
-        \draw[->] (sww) to node[below] {$h\Sub{A_\infty}$} (se);
-        \node[above = of nw] (nnw) {$\brc{A_\infty}$};
-        \draw[->] (nww) to node[sloped,above] {$\iota_\bullet$} (nnw);
-        \draw[->] (nnw) to node[sloped,above] {$\brc{\eta\Sub{A_\infty}}$} (ne);
-      \end{tikzpicture}
-    }}
+    \p{Finally, we must check that any two morphisms #{\Mor{k,k'}{\Lift{A_\infty}}{D}} factoring #{\Mor{d_\bullet}{\Lift{A_\bullet}}{\brc{D}}} through #{\Mor{\Lift{\iota_\bullet}}{\Lift{A_\bullet}}{\brc{\Lift{A_\infty}}}} are equal. To that end, we will use the universal property of the co-comma square defining #{\Lift{A_\infty}} once more to reduce this to checking that #{k,k'} agree on #{\bot} and on #{\eta\Sub{A_\bullet}}. The former follows directly from the strictness of #{\Lift{\iota_\bullet}}, as we have #{k\bot = k\prn{\Lift \iota_\bullet\bot}=d_\bullet\bot}. For the latter, we must check that #{k\circ \eta\Sub{A_\infty}=k'\circ \eta\Sub{A_\infty}}; by the universal property of the colimiting cocone #{\Mor{\iota_\bullet}{A_\bullet}{A_\infty}}, it suffices to check that #{k\circ\eta\Sub{A_\infty}\circ \iota_\bullet = k'\circ\eta\Sub{A_\infty}\circ\iota_\bullet}. By naturality of the unit, these are both equal to #{d_\bullet\circ \eta\Sub{A_\bullet}}.}
   }
-
-
-  \p{Finally, we must check that any two morphisms #{\Mor{k,k'}{\Lift{A_\infty}}{D}} factoring #{\Mor{d_\bullet}{\Lift{A_\bullet}}{\brc{D}}} through #{\Mor{\Lift{\iota_\bullet}}{\Lift{A_\bullet}}{\brc{\Lift{A_\infty}}}} are equal. To that end, we will use the universal property of the co-comma square defining #{\Lift{A_\infty}} once more to reduce this to checking that #{k,k'} agree on #{\bot} and on #{\eta\Sub{A_\bullet}}. The former follows directly from the strictness of #{\Lift{\iota_\bullet}}, as we have #{k\bot = k\prn{\Lift \iota_\bullet\bot}=d_\bullet\bot}. For the latter, we must check that #{k\circ \eta\Sub{A_\infty}=k'\circ \eta\Sub{A_\infty}}; by the universal property of the colimiting cocone #{\Mor{\iota_\bullet}{A_\bullet}{A_\infty}}, it suffices to check that #{k\circ\eta\Sub{A_\infty}\circ \iota_\bullet = k'\circ\eta\Sub{A_\infty}\circ\iota_\bullet}. By naturality of the unit, these are both equal to #{d_\bullet\circ \eta\Sub{A_\bullet}}.}
-  
 }

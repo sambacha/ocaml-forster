@@ -14,12 +14,8 @@
 
 \p{\strong{Therefore, the precise requirement for macro library support is as follows:}}
 \ol{
-  \li{
-
-    \p{The author must be able to define (in their own files) multiple notational macro libraries.}}
-  \li{
-
-    \p{A given note must be able to specify which macro library (if any) it employs.}}
+  \li{The author must be able to define (in their own files) multiple notational macro libraries.}
+  \li{A given note must be able to specify which macro library (if any) it employs.}
 }
 
 

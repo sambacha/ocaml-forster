@@ -10,8 +10,8 @@
 
 \p{Let #{\CCat} and #{\DCat} be two [wild categories](jms-0037). A \em{wild 0-functor} from #{\CCat} to #{\DCat} is given by the following data:}
 \ol{
-\li{a function #{\Ob{F} : \Ob{\CCat}\to\Ob{\DCat}};}
-\li{for each #{A,B:\Ob{\CCat}}, a function #{\Homs{F} : \Hom{\CCat}{A}{B}\to\Hom{\DCat}{\Ob{F}A}{\Ob{F}B}}.}
+  \li{a function #{\Ob{F} : \Ob{\CCat}\to\Ob{\DCat}};}
+  \li{for each #{A,B:\Ob{\CCat}}, a function #{\Homs{F} : \Hom{\CCat}{A}{B}\to\Hom{\DCat}{\Ob{F}A}{\Ob{F}B}}.}
 }
 
 

@@ -10,13 +10,8 @@
 
 \p{We say that a [pointed](jms-001S) dcpo #{A} has an \em{open positivity predicate} if and only if any of the following equivalent conditions hold:}
 \ol{
-\li{
+  \li{The positivity predicate #{\Mor{\IsPos}{\Gamma A}{\Omega}} tracks a continuous morphism of dcpos #{\Mor{\IsPos}{A}{\Sigma}}.}
 
-\p{The positivity predicate #{\Mor{\IsPos}{\Gamma A}{\Omega}} tracks a continuous morphism of dcpos #{\Mor{\IsPos}{A}{\Sigma}}.}}
-\li{
-
-\p{The embedding #{\Mor{\iota^+}{A^+}{A}} is a Scott-open immersion.}}
-\li{
-
-\p{For a directed subset #{I\subseteq A}, if #{\bigsqcup{A}} is positive then there exists an element #{a\in I} that is positive in #{A}.}}
+  \li{The embedding #{\Mor{\iota^+}{A^+}{A}} is a Scott-open immersion.}
+  \li{For a directed subset #{I\subseteq A}, if #{\bigsqcup{A}} is positive then there exists an element #{a\in I} that is positive in #{A}.}
 }

@@ -7,10 +7,6 @@
 
 \p{An \em{author} of a [tree within a forest](tfmt-000R) is someone who satisfies the following conditions:}
 \ol{
-  \li{
-
-    \p{They contributed intellectually to the immediate textual content of the tree, i.e. the non-transcluded content.}}
-  \li{
-
-    \p{They can be held responsible for all the content within the tree, i.e. both the immediate textual content as well as the content of all the subtrees.}}
+  \li{They contributed intellectually to the immediate textual content of the tree, i.e. the non-transcluded content.}
+  \li{They can be held responsible for all the content within the tree, i.e. both the immediate textual content as well as the content of all the subtrees.}
 }
