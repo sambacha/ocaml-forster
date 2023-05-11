@@ -1,0 +1,21 @@
+\title{epimorphisms in terms of exactness}
+\date{2023-01-17T16:27:38-05:00}
+\author{jonmsterling}
+
+\import{jms-0003}
+\let\ACat{\mathcal{A}}
+
+
+\p{A sequence #{A\xrightarrow{f}B\xrightarrow{}\ObjInit{\ACat}}
+in an abelian category #{\ACat} is [exact](jms-0005) if and only if #{A\xrightarrow{f}B} is an epimorphism.}
+
+\p{
+% start-env not supported
+
+By duality, an exact sequence #{A\xrightarrow{f}B\xrightarrow{}\ObjInit{\ACat}} is an exact sequence #{B\xrightarrow{\bar{f}}A\xrightarrow{}\ObjInit{\OpCat{\ACat}}} in #{\OpCat{\ACat}}. Hence, #{\bar{f}} [is a monomorphism](jms-0007) in #{\OpCat{\ACat}} and thus #{f} is an epimorphism in #{\ACat}
+
+% stop-env not supported
+}
+goldmark-latex: HTML block rendering unsupported, skipped
+
+goldmark-latex: HTML block rendering unsupported, skipped

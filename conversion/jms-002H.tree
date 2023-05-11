@@ -1,0 +1,17 @@
+\title{the bottom element is not positive}
+\date{2023-02-16T17:25:49Z}
+\taxon{lemma}
+\author{jonmsterling}
+
+\import{jms-001M}
+
+
+\p{The bottom element #{\bot} of a pointed dcpo #{A} is not [positive](jms-001M).}
+
+\p{
+% start-env not supported
+
+Suppose that #{\bot} was positive. The empty set #{\brc{}\subseteq A} is semidirected and #{\bot\sqsubseteq \bigsqcup\brc{}=\bot}, but nonetheless #{\brc{}} is not inhabited.
+
+% stop-env not supported
+}
