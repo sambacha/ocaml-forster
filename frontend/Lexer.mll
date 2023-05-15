@@ -60,6 +60,7 @@ rule token =
   | "\\export" { return lexbuf @@ Parser.EXPORT }
   | "\\meta" { return lexbuf @@ Parser.META }
   | "\\def" { return lexbuf @@ Parser.DEF }
+  | "\\alloc" { return lexbuf @@ Parser.ALLOC }
   | "\\let" { return lexbuf @@ Parser.LET }
   | "\\tex" { return lexbuf @@ Parser.TEX }
   | "\\block" { return lexbuf @@ Parser.BLOCK }
