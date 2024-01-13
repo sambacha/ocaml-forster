@@ -79,7 +79,7 @@ let run_renderer ~cfg (forest : forest) (body : unit -> 'a) : 'a =
 
     let bibliography scope =
       get_sorted_trees @@
-      S.of_list @@ A.Tbl.find_all analysis.bibliography scope
+      S.of_list @@ Tbl.find_all analysis.bibliography scope
 
     let parents scope =
       get_sorted_trees @@ S.of_list @@ Gph.succ analysis.transclusion_graph scope
@@ -101,6 +101,22 @@ let run_renderer ~cfg (forest : forest) (body : unit -> 'a) : 'a =
       let by_title = Compare.under addr_peek_title @@ Compare.option String.compare in
       let compare = Compare.cascade by_title String.compare in
       List.sort compare @@ S.elements proper_contributors
+
+    let connected_component scope =
+      let rec hchildren addr =
+        let children = Gph.pred analysis.transclusion_graph addr in
+        children @ (children |> List.concat_map @@ hchildren)
+      in
+      let set =
+        List.fold_left (fun xs ys -> S.union xs @@ S.of_list ys) (S.singleton scope) @@
+        [Gph.succ analysis.transclusion_graph scope;
+         hchildren scope;
+         Tbl.find_all analysis.author_pages scope;
+         Tbl.find_all analysis.bibliography scope;
+         Gph.pred analysis.link_graph scope;
+         Gph.succ analysis.link_graph scope]
+      in
+      get_sorted_trees set
 
     let run_query query =
       get_sorted_trees @@ S.of_seq @@ Seq.map fst @@ M.to_seq @@

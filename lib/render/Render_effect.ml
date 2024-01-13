@@ -13,7 +13,8 @@ sig
   val bibliography : addr -> Sem.tree list
   val parents : addr -> Sem.tree list
   val children : addr -> Sem.tree list
-  val contributors : addr -> string list
+  val contributors : addr -> addr list
+  val connected_component : addr -> Sem.tree list
   val contributions : addr -> Sem.tree list
   val enqueue_latex : name:string -> packages:string list -> source:string -> unit
   val get_doc : addr -> Sem.tree option
@@ -30,6 +31,7 @@ type _ Effect.t +=
   | Children : addr -> Sem.tree list Effect.t
   | Contributions : addr -> Sem.tree list Effect.t
   | Contributors : addr -> string list Effect.t
+  | ConnectedComponent : addr -> Sem.tree list Effect.t
   | Enqueue_latex : {name : string; packages : string list; source : string} -> unit Effect.t
   | Get_doc : addr -> Sem.tree option Effect.t
   | Run_query : Sem.t Query.t -> Sem.tree list Effect.t
@@ -45,6 +47,7 @@ struct
   let parents addr = Effect.perform @@ Parents addr
   let children addr = Effect.perform @@ Children addr
   let contributors addr = Effect.perform @@ Contributors addr
+  let connected_component addr = Effect.perform @@ ConnectedComponent addr
   let enqueue_latex ~name ~packages ~source = Effect.perform @@ Enqueue_latex {name; packages; source}
   let get_doc addr = Effect.perform @@ Get_doc addr
   let run_query query = Effect.perform @@ Run_query query
@@ -77,6 +80,8 @@ struct
            resume @@ fun () -> H.children addr
          | Contributors addr ->
            resume @@ fun () -> H.contributors addr
+         | ConnectedComponent addr ->
+           resume @@ fun () -> H.connected_component addr
          | Contributions addr ->
            resume @@ fun () -> H.contributions addr
          | Enqueue_latex {name; packages; source} ->
