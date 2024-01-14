@@ -204,31 +204,33 @@ let render_tree ~cfg ~cwd ~bib_fmt doc =
   doc.addr |> Option.iter @@ fun addr ->
   let create = `Or_truncate 0o644 in
   let base_url = cfg.base_url in
+  (* begin
+     let ch = open_out @@ "output/" ^ E.route Xml addr in
+     Fun.protect ~finally:(fun _ -> close_out ch) @@ fun _ ->
+     let out = Xmlm.make_output @@ `Channel ch in
+     Render_xml.render_tree_page ~base_url doc out
+     end; *)
   begin
-    (* TODO: the XML output via Eio is overflowing!!! *)
-    let ch = open_out @@ "output/" ^ E.route Xml addr in
-    (* let path = Eio.Path.(cwd / "output" / E.route Xml addr) in *)
-    (* Eio.Path.with_open_out ~create path @@ fun flow -> *)
-    (* Eio.Buf_write.with_flow flow @@ fun w -> *)
+    let ch = open_out @@ "output-tei/" ^ E.route Xml addr in
     Fun.protect ~finally:(fun _ -> close_out ch) @@ fun _ ->
     let out = Xmlm.make_output @@ `Channel ch in
-    (* Eio_util.xmlm_dest_of_writer w in *)
-    Render_xml.render_tree_page ~base_url doc out
-  end;
-  begin
-    base_url |> Option.iter @@ fun base_url ->
-    let path = Eio.Path.(cwd / "output" / E.route Rss addr) in
-    Eio.Path.with_open_out ~create path @@ fun flow ->
-    Eio.Buf_write.with_flow flow @@ fun w ->
-    let out = Xmlm.make_output @@ Eio_util.xmlm_dest_of_writer w in
-    Render_rss.render_tree_page ~base_url doc out
-  end;
-  begin
-    let path = Eio.Path.(cwd / "latex" / (addr ^ ".tex")) in
-    Eio.Path.with_open_out ~create path @@ fun flow ->
-    Eio.Buf_write.with_flow flow @@ fun w ->
-    Render_latex.render_tree_page ~base_url doc @@ Eio_util.formatter_of_writer w
+    Render_tei.render_tree_page ~base_url doc out
   end
+(* ; *)
+(* begin
+   base_url |> Option.iter @@ fun base_url ->
+   let path = Eio.Path.(cwd / "output" / E.route Rss addr) in
+   Eio.Path.with_open_out ~create path @@ fun flow ->
+   Eio.Buf_write.with_flow flow @@ fun w ->
+   let out = Xmlm.make_output @@ Eio_util.xmlm_dest_of_writer w in
+   Render_rss.render_tree_page ~base_url doc out
+   end;
+   begin
+   let path = Eio.Path.(cwd / "latex" / (addr ^ ".tex")) in
+   Eio.Path.with_open_out ~create path @@ fun flow ->
+   Eio.Buf_write.with_flow flow @@ fun w ->
+   Render_latex.render_tree_page ~base_url doc @@ Eio_util.formatter_of_writer w
+   end *)
 
 let render_json ~cwd docs =
   let create = `Or_truncate 0o644 in
@@ -286,6 +288,7 @@ let render_trees ~cfg ~forest : unit =
   let cwd = Eio.Stdenv.cwd env in
 
   Eio_util.ensure_dir @@ Eio.Path.(cwd / "build");
+  Eio_util.ensure_dir @@ Eio.Path.(cwd / "output-tei");
   Eio_util.ensure_dir_path cwd ["output"; "resources"];
   Eio_util.ensure_dir_path cwd ["latex"; "resources"];
 
