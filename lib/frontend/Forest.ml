@@ -103,20 +103,15 @@ let run_renderer ~cfg (forest : forest) (body : unit -> 'a) : 'a =
       List.sort compare @@ S.elements proper_contributors
 
     let connected_component scope =
-      let rec hchildren addr =
-        let children = Gph.pred analysis.transclusion_graph addr in
-        children @ (children |> List.concat_map @@ hchildren)
-      in
       let set =
         List.fold_left (fun xs ys -> S.union xs @@ S.of_list ys) (S.singleton scope) @@
         [Gph.succ analysis.transclusion_graph scope;
-         hchildren scope;
          Tbl.find_all analysis.author_pages scope;
          Tbl.find_all analysis.bibliography scope;
          Gph.pred analysis.link_graph scope;
          Gph.succ analysis.link_graph scope]
       in
-      get_sorted_trees set
+      get_sorted_trees @@ S.add scope set
 
     let run_query query =
       get_sorted_trees @@ S.of_seq @@ Seq.map fst @@ M.to_seq @@
@@ -229,7 +224,7 @@ let render_tree ~cfg ~cwd ~bib_fmt doc =
   begin
     let ch = open_out @@ "output-tei/" ^ E.route Xml addr in
     Fun.protect ~finally:(fun _ -> close_out ch) @@ fun _ ->
-    let out = Xmlm.make_output @@ `Channel ch in
+    let out = Xmlm.make_output  ~nl:true ~indent:(Some 2) @@ `Channel ch in
     Render_tei.render_tree_page ~base_url doc out
   end
 (* ; *)

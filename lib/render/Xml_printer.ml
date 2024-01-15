@@ -18,7 +18,7 @@ let attr ?(ns = "") k v =
 let tag ?(ns = "") name attrs bdy : printer =
   fun out ->
   Xmlm.output out @@ `El_start ((ns, name), attrs);
-  seq ~sep:space bdy out;
+  seq ~sep:nil bdy out;
   Xmlm.output out `El_end
 
 let with_xsl stylesheet bdy : printer =

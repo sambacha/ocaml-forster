@@ -35,6 +35,14 @@ and t = node Range.located list
 and env = t Env.t
 [@@deriving show]
 
+type toplevel =
+  | AnonDiv of t
+  | QueryDiv of transclusion_opts * t Query.t
+  | TranscludeDiv of transclusion_opts * addr
+  | BlockDiv of t * normalised
+
+and normalised = toplevel Range.located list
+
 type obj_method =
   {body : Syn.t;
    self : Symbol.t;
@@ -115,6 +123,26 @@ let string_of_nodes =
     | Transclude _ | Query _ | Block _ | Unresolved _ | Img _ | Object _ -> None
   in
   render
+
+let rec normalise ?(acc = Bwd.Emp) nodes =
+  let open Bwd.Bwd.Infix in
+  match nodes with
+  | Range.{value = Transclude (opts, addr); loc} :: nodes ->
+    Range.locate_opt None (AnonDiv (acc @> []))
+    :: Range.locate_opt loc (TranscludeDiv (opts, addr))
+    :: normalise ~acc:Bwd.Emp nodes
+  | Range.{value = Query (opts, query); loc} :: nodes ->
+    Range.locate_opt None (AnonDiv (acc @> []))
+    :: Range.locate_opt loc (QueryDiv (opts, query))
+    :: normalise ~acc:Bwd.Emp nodes
+  | Range.{value = Block (head, body); loc} :: nodes ->
+    Range.locate_opt None (AnonDiv (acc @> []))
+    :: Range.locate_opt loc (BlockDiv (head, normalise body))
+    :: normalise ~acc:Bwd.Emp nodes
+  | node :: nodes ->
+    normalise ~acc:(acc <: node) nodes
+  | [] ->
+    [Range.locate_opt None (AnonDiv (acc @> []))]
 
 module Util =
 struct
