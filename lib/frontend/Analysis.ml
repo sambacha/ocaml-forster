@@ -80,6 +80,10 @@ let analyze_doc ~analysis scope (doc : Sem.tree) =
     Tbl.add analysis.author_pages author scope
   end;
   begin
+    doc.contributors |> List.iter @@ fun author ->
+    Tbl.add analysis.author_pages author scope
+  end;
+  begin
     doc.metas |> List.iter @@ fun (_, meta) ->
     analyze_nodes ~analysis scope meta
   end
@@ -114,7 +118,10 @@ let analyze_trees (trees : Sem.tree Map.t) : analysis =
       | Some "reference" -> ()
       | _ ->
         begin
-          parent_doc.authors @ Tbl.find_all analysis.contributors child_addr |> List.iter @@ fun contributor ->
+          parent_doc.authors
+          @ parent_doc.contributors
+          @ Tbl.find_all analysis.contributors child_addr
+          |> List.iter @@ fun contributor ->
           Tbl.add analysis.contributors parent_addr contributor
         end;
         merge_bibliography ~analysis ~from_addr:child_addr ~to_addr:parent_addr

@@ -92,6 +92,7 @@ let rec render_node ~cfg : Sem.node Range.located -> printer =
            taxon = None;
            title = None;
            authors = [];
+           contributors = [];
            dates = [];
            metas = [];
            tags = [];

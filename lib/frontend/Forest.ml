@@ -93,7 +93,7 @@ let run_renderer ~cfg (forest : forest) (body : unit -> 'a) : 'a =
     let contributors scope =
       let tree = M.find scope forest.trees in
       let authors = S.of_list tree.authors in
-      let contributors = S.of_list @@ Tbl.find_all analysis.contributors scope in
+      let contributors = S.union (S.of_list tree.contributors) @@ S.of_list @@ Tbl.find_all analysis.contributors scope in
       let proper_contributors =
         contributors |> S.filter @@ fun contr ->
         not @@ S.mem contr authors
@@ -206,6 +206,17 @@ let prefixes ~(addrs : addr Seq.t) : string list =
   in
   prefixes
 
+let taxa ~forest =
+  forest.trees
+  |> M.filter_map (fun _ -> Sem.Util.taxon)
+  |> M.to_seq
+
+let tags ~forest =
+  forest.trees
+  |> M.map Sem.Util.tags
+  |> M.filter (fun _ -> fun tags -> not @@ List.is_empty tags)
+  |> M.to_seq
+
 module E = Render_effect.Perform
 
 let render_tree ~cfg ~cwd ~bib_fmt doc =
@@ -252,40 +263,46 @@ let render_json ~cwd docs =
   let docs = Sem.Util.sort @@ List.of_seq @@ Seq.map snd @@ M.to_seq docs in
   Render_json.render_trees docs fmt
 
+let is_hidden_file fname =
+  String.starts_with ~prefix:"." fname
+
 let copy_theme ~env =
   let cwd = Eio.Stdenv.cwd env in
   let fs = Eio.Stdenv.fs env in
   Eio.Path.with_open_dir Eio.Path.(fs / "theme") @@ fun theme ->
   Eio.Path.read_dir theme |> List.iter @@ fun fname ->
-  let source = "theme/" ^ fname in
-  Eio_util.copy_to_dir ~env ~cwd ~source ~dest_dir:"output"
+  if not @@ is_hidden_file fname then
+    let source = "theme/" ^ fname in
+    Eio_util.copy_to_dir ~env ~cwd ~source ~dest_dir:"output"
 
 let copy_assets ~env ~assets_dirs =
   let cwd = Eio.Stdenv.cwd env in
   assets_dirs |> List.iter @@ fun assets_dir ->
   Eio.Path.with_open_dir assets_dir @@ fun assets ->
   Eio.Path.read_dir assets |> List.iter @@ fun fname ->
-  let path = Eio.Path.(assets_dir / fname) in
-  let source = Eio.Path.native_exn path in
-  Eio_util.copy_to_dir ~env ~cwd ~source ~dest_dir:"build";
-  Eio_util.copy_to_dir ~env ~cwd ~source ~dest_dir:"output";
-  Eio_util.copy_to_dir ~env ~cwd ~source ~dest_dir:"latex"
+  if not @@ is_hidden_file fname then
+    let path = Eio.Path.(assets_dir / fname) in
+    let source = Eio.Path.native_exn path in
+    Eio_util.copy_to_dir ~env ~cwd ~source ~dest_dir:"build";
+    Eio_util.copy_to_dir ~env ~cwd ~source ~dest_dir:"output";
+    Eio_util.copy_to_dir ~env ~cwd ~source ~dest_dir:"latex"
 
 let copy_resources ~env =
   let cwd = Eio.Stdenv.cwd env in
   Eio.Path.with_open_dir Eio.Path.(cwd / "build") @@ fun build ->
   Eio.Path.read_dir build |> List.iter @@ fun fname ->
-  let ext = Filename.extension fname in
-  let fp = Format.sprintf "build/%s" fname in
-  let dest_opt =
-    match ext with
-    | ".svg" -> Some "output/resources";
-    | ".pdf" -> Some "latex/resources"
-    | _ -> None
-  in
-  dest_opt |> Option.iter @@ fun dest_dir ->
-  if not @@ Eio_util.file_exists Eio.Path.(cwd / dest_dir / fname) then
-    Eio_util.copy_to_dir ~cwd ~env ~source:fp ~dest_dir
+  if not @@ is_hidden_file fname then
+    let ext = Filename.extension fname in
+    let fp = Format.sprintf "build/%s" fname in
+    let dest_opt =
+      match ext with
+      | ".svg" -> Some "output/resources";
+      | ".pdf" -> Some "latex/resources"
+      | _ -> None
+    in
+    dest_opt |> Option.iter @@ fun dest_dir ->
+    if not @@ Eio_util.file_exists Eio.Path.(cwd / dest_dir / fname) then
+      Eio_util.copy_to_dir ~cwd ~env ~source:fp ~dest_dir
 
 let with_bib_fmt ~cwd kont =
   let create = `Or_truncate 0o644 in
@@ -305,7 +322,12 @@ let render_trees ~cfg ~forest : unit =
 
   run_renderer ~cfg forest @@ fun () ->
   with_bib_fmt ~cwd @@ fun bib_fmt ->
-  forest.trees |> M.iter (fun _ -> render_tree ~cfg ~cwd ~bib_fmt);
+  forest.trees
+  |> M.to_seq
+  |> Seq.map snd
+  |> List.of_seq
+  |> Sem.Util.sort
+  |> List.iter (render_tree ~cfg ~cwd ~bib_fmt);
   render_json ~cwd forest.trees;
   if not cfg.no_assets then
     copy_assets ~env ~assets_dirs:cfg.assets_dirs;
