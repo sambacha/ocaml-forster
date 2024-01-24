@@ -75,12 +75,7 @@ let rec render_node : cfg:cfg -> Sem.node Range.located -> printer =
   | Sem.Math (mode, code) ->
     let module TP = Render_verbatim.Printer in
     let rend = match mode with Inline -> "inline" | Display -> "display" in
-    let wrap x =
-      match mode with
-      | Inline -> x
-      | Display -> Xml.tag "ab" [] [x]
-    in
-    wrap @@ Xml.tag "formula" [Xml.attr "notation" "tex"; Xml.attr "rend" rend] [
+    Xml.tag "formula" [Xml.attr "notation" "tex"; Xml.attr "rend" rend] [
       Xml.text @@
       TP.contents @@
       Render_verbatim.render ~cfg:{tex = false} code
@@ -98,7 +93,41 @@ let rec render_node : cfg:cfg -> Sem.node Range.located -> printer =
     Xml.tag name attrs [render ~cfg xs]
 
   | Sem.Transclude (opts, addr) ->
-    Reporter.fatalf ?loc:located.loc Unhandled_case "did not expect transclusion in this position"
+    begin
+      match E.get_doc addr with
+      | None ->
+        Reporter.fatalf ?loc:located.loc Tree_not_found "could not find tree at address `%s` for transclusion" addr
+      | Some tree ->
+        render_transclusion ~cfg ~opts tree
+    end
+
+  | Sem.Query (opts, query) ->
+    (* TODO: Don't run query if we're in the backmatter! *)
+    let docs = E.run_query query in
+    begin
+      match docs with
+      | [] -> Xml.nil
+      | _ ->
+        let body =
+          docs |> List.filter_map @@ fun (doc : Sem.tree) ->
+          doc.addr |> Option.map @@ fun addr ->
+          let opts = Sem.{expanded = false; show_heading = true; title_override = None; taxon_override = None; toc = false; numbered = false; show_metadata = true} in
+          Range.locate_opt None @@ Sem.Transclude (opts, addr)
+        in
+        let doc : Sem.tree =
+          {addr = None;
+           taxon = None;
+           title = None;
+           authors = [];
+           contributors = [];
+           dates = [];
+           metas = [];
+           tags = [];
+           body = body;
+           source_path = None}
+        in
+        render_transclusion ~cfg ~opts doc
+    end
 
   | _ ->
     Reporter.emitf ?loc:located.loc Unhandled_case "unhandled case";
@@ -106,17 +135,19 @@ let rec render_node : cfg:cfg -> Sem.node Range.located -> printer =
 (* Xml.text @@ Sem.show_node located.value *)
 
 and render_transclusion ~cfg ~opts (tree : Sem.tree) =
-  Xml.tag "div" [] [
-    Xml.tag "head" [] [
-      begin
-        tree.addr |> Xml.option @@ fun addr ->
-        Xml.tag "idno" [Xml.attr "type" "tree"] [Xml.text addr]
-      end;
-      Xml.tag "biblFull" [] [
-        render_tree_metadata ~cfg tree
-      ]
+  Xml.tag "floatingText" [] [
+    Xml.tag "body" [] [
+      Xml.tag "head" [] [
+        begin
+          tree.addr |> Xml.option @@ fun addr ->
+          Xml.tag "idno" [Xml.attr "type" "tree"] [Xml.text addr]
+        end;
+        Xml.tag "biblFull" [] [
+          render_tree_metadata ~cfg tree
+        ]
+      ];
+      render ~cfg tree.body
     ];
-    render_toplevel ~cfg @@ Sem.normalise tree.body
   ]
 
 and render_internal_link ~cfg ~title ~modifier ~addr =
@@ -157,75 +188,11 @@ and render_tree : cfg:cfg -> opts:Sem.transclusion_opts -> Sem.tree -> printer =
     render_tei_header ~cfg tree;
     Xml.tag "text" [] [
       Xml.tag "body" [] [
-        render_toplevel ~cfg @@ Sem.normalise tree.body
+        render ~cfg tree.body
       ]
     ]
   ]
 
-
-and render_toplevel ~cfg ?(state = `Initial) divs =
-  match divs with
-  | [] -> Xml.nil
-  | div :: divs ->
-    match div.value with
-    | AnonDiv body ->
-      let output =
-        match state with
-        | `Initial -> render ~cfg body
-        | `Middle -> Xml.tag "div" [Xml.attr "rend" "anon"] [render ~cfg body]
-      in
-      Xml.seq [output; render_toplevel ~cfg divs]
-    | TranscludeDiv (opts, addr) ->
-      begin
-        match E.get_doc addr with
-        | None ->
-          Reporter.fatalf ?loc:div.loc Tree_not_found "could not find tree at address `%s` for transclusion" addr
-        | Some tree ->
-          Xml.seq [
-            render_transclusion ~cfg ~opts tree;
-            render_toplevel ~cfg ~state:`Middle divs
-          ]
-      end
-    | QueryDiv (opts, query) ->
-      (* TODO: Don't run query if we're in the backmatter! *)
-      let docs = E.run_query query in
-      begin
-        match docs with
-        | [] -> Xml.nil
-        | _ ->
-          let body =
-            docs |> List.filter_map @@ fun (doc : Sem.tree) ->
-            doc.addr |> Option.map @@ fun addr ->
-            let opts = Sem.{expanded = false; show_heading = true; title_override = None; taxon_override = None; toc = false; numbered = false; show_metadata = true} in
-            Range.locate_opt None @@ Sem.Transclude (opts, addr)
-          in
-          let doc : Sem.tree =
-            {addr = None;
-             taxon = None;
-             title = None;
-             authors = [];
-             dates = [];
-             metas = [];
-             tags = [];
-             body = body;
-             source_path = None}
-          in
-          Xml.seq [
-            render_transclusion ~cfg ~opts doc;
-            render_toplevel ~cfg ~state:`Middle divs
-          ]
-      end
-
-    | BlockDiv (head, body) ->
-      Xml.seq [
-        Xml.tag "div" [] [
-          Xml.tag "head" [] [
-            (* TODO *)
-          ];
-          render_toplevel ~cfg body
-        ];
-        render_toplevel ~cfg ~state:`Middle divs
-      ]
 
 
 and render_tree_metadata : cfg:cfg -> Sem.tree -> printer =
