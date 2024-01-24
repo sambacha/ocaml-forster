@@ -101,6 +101,30 @@ let rec render_node : cfg:cfg -> Sem.node Range.located -> printer =
         render_transclusion ~cfg ~opts tree
     end
 
+  | Sem.Block (title, body) ->
+    Xml.tag "floatingText" [] [
+      Xml.tag "body" [] [
+        Xml.tag "head" [] [
+          Xml.tag "title" [] [
+            render ~cfg title
+          ]
+        ];
+        render ~cfg body
+      ];
+    ]
+
+  | Sem.Embed_tex {packages; source} ->
+    let code =
+      Render_verbatim.Printer.contents @@
+      Render_verbatim.render ~cfg:{tex = true} source
+    in
+    let hash = Digest.to_hex @@ Digest.string code in
+    E.enqueue_latex ~name:hash ~packages ~source:code;
+    let path = Format.sprintf "resources/%s-web.svg" hash in
+    Xml.tag "figure" [] [
+      Xml.tag "graphic" [Xml.attr "url" path] []
+    ]
+
   | Sem.Query (opts, query) ->
     (* TODO: Don't run query if we're in the backmatter! *)
     let docs = E.run_query query in
@@ -130,9 +154,7 @@ let rec render_node : cfg:cfg -> Sem.node Range.located -> printer =
     end
 
   | _ ->
-    Reporter.emitf ?loc:located.loc Unhandled_case "unhandled case";
-    Xml.nil
-(* Xml.text @@ Sem.show_node located.value *)
+    Reporter.fatalf ?loc:located.loc Unhandled_case "unhandled case"
 
 and render_transclusion ~cfg ~opts (tree : Sem.tree) =
   Xml.tag "floatingText" [] [
