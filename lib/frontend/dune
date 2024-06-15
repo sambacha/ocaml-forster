@@ -19,6 +19,7 @@
   eio_main
   str
   toml
+  pure-html
   yuujinchou))
 
 (env

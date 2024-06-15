@@ -1,7 +1,7 @@
 open Forester_core
 open Forester_prelude
 
-open Dream_html_lite
+open Pure_html
 
 module E = Render_effect.Perform
 module F = Dream_forester

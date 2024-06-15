@@ -274,7 +274,7 @@ let render_tree ~cfg ~cwd (tree : Sem.tree) =
     Format.pp_print_newline fmt ();
     Format.fprintf fmt "<?xml-stylesheet type=\"text/xsl\" href=\"%s\"?>" cfg.stylesheet;
     Format.pp_print_newline fmt ();
-    Dream_html_lite.pp fmt node
+    Pure_html.pp fmt node
   end
 
 let render_json ~cwd docs =
