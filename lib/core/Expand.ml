@@ -10,29 +10,32 @@ module U = Algaeff.State.Make (struct type t = exports UnitMap.t end)
 
 module Builtins =
 struct
-  let create path =
+  let create_sym path =
     let sym = Symbol.fresh path in
     sym, fun () ->
       Resolver.Scope.include_singleton (path, (Sym sym, ()))
 
+  let register_builtin path node =
+    Resolver.Scope.include_singleton
+      (path,
+       (Term [Range.locate_opt None node],
+        ()))
+
   module Transclude =
   struct
-    let title_sym, alloc_title = create ["transclude"; "title"]
-    let taxon_sym, alloc_taxon = create ["transclude"; "taxon"]
-    let expanded_sym, alloc_expanded = create ["transclude"; "expanded"]
-    let show_heading_sym, alloc_show_heading = create ["transclude"; "heading"]
-    let toc_sym, alloc_toc = create ["transclude"; "toc"]
-    let numbered_sym, alloc_numbered = create ["transclude"; "numbered"]
-    let show_metadata_sym, alloc_show_metadata = create ["transclude"; "metadata"]
+    let title_sym, alloc_title = create_sym ["transclude"; "title"]
+    let taxon_sym, alloc_taxon = create_sym ["transclude"; "taxon"]
+    let expanded_sym, alloc_expanded = create_sym ["transclude"; "expanded"]
+    let show_heading_sym, alloc_show_heading = create_sym ["transclude"; "heading"]
+    let toc_sym, alloc_toc = create_sym ["transclude"; "toc"]
+    let numbered_sym, alloc_numbered = create_sym ["transclude"; "numbered"]
+    let show_metadata_sym, alloc_show_metadata = create_sym ["transclude"; "metadata"]
   end
 end
 
 let rec expand : Code.t -> Syn.t =
   function
   | [] -> []
-
-  | {value = Prim (p, x); loc} :: rest ->
-    {value = Syn.Prim (p, expand x); loc} :: expand rest
 
   | {value = Text x; loc} :: rest ->
     {value = Syn.Text x; loc} :: expand rest
@@ -71,18 +74,12 @@ let rec expand : Code.t -> Syn.t =
   | {value = Group (d, xs); loc} :: rest ->
     {value = Syn.Group (d, expand xs); loc} :: expand rest
 
-  | {value = Transclude addr; loc} :: rest ->
-    {value = Syn.Transclude (expand addr); loc} :: expand rest
-
   | {value = Subtree (addr, nodes); loc} :: rest ->
     let subtree = expand_tree_inner @@ Code.{source_path = None; addr = addr; code = nodes} in
     {value = Syn.Subtree (addr, subtree); loc} :: expand rest
 
   | {value = Query query; loc} :: rest ->
     {value = Syn.Query (Query.map expand query); loc} :: expand rest
-
-  | {value = Embed_tex (preamble, source); loc} :: rest ->
-    {value = Syn.Embed_tex {preamble = expand preamble; source = expand source}; loc} :: expand rest
 
   | {value = Math (m, xs); loc} :: rest ->
     {value = Syn.Math (m, expand xs); loc} :: expand rest
@@ -95,9 +92,6 @@ let rec expand : Code.t -> Syn.t =
         loop [Range.{value = Syn.Call (acc, m); loc}] ms
     in
     loop (expand_ident loc path) methods @ expand rest
-
-  | {value = Ref x; loc} :: rest ->
-    {value = Syn.Ref (expand x); loc} :: expand rest
 
   | {value = Scope body; _} :: rest ->
     let body =
@@ -202,33 +196,6 @@ let rec expand : Code.t -> Syn.t =
     Resolver.Scope.include_singleton (path, (Sym symbol, ()));
     expand rest
 
-  | {value = Title xs; loc} :: rest ->
-    {value = Syn.Title (expand xs); loc} :: expand rest
-
-  | {value = Parent addr; loc} :: rest ->
-    {value = Syn.Parent addr; loc} :: expand rest
-
-  | {value = Author author; loc} :: rest ->
-    {value = Syn.Author author; loc} :: expand rest
-
-  | {value = Contributor author; loc} :: rest ->
-    {value = Syn.Contributor author; loc} :: expand rest
-
-  | {value = Tag tag; loc} :: rest ->
-    {value = Syn.Tag tag; loc} :: expand rest
-
-  | {value = Taxon taxon; loc} :: rest ->
-    {value = Syn.Taxon taxon; loc} :: expand rest
-
-  | {value = Date str; loc} :: rest ->
-    {value = Syn.Date str; loc} :: expand rest
-
-  | {value = Number str; loc} :: rest ->
-    {value = Syn.Number str; loc} :: expand rest
-
-  | {value = Meta (k, v); loc} :: rest ->
-    {value = Syn.Meta (k, expand v); loc} :: expand rest
-
 and expand_method (key, body) =
   key, expand body
 
@@ -318,6 +285,28 @@ and expand_tree_inner (tree : Code.tree) : Syn.tree =
 let expand_tree (units : exports UnitMap.t) (tree : Code.tree) =
   U.run ~init:units @@ fun () ->
   Resolver.Scope.run @@ fun () ->
+  Builtins.register_builtin ["title"] Syn.Set_title;
+  Builtins.register_builtin ["parent"] Syn.Set_parent;
+  Builtins.register_builtin ["taxon"] Syn.Set_taxon;
+  Builtins.register_builtin ["author"] Syn.Add_author;
+  Builtins.register_builtin ["contributor"] Syn.Add_contributor;
+  Builtins.register_builtin ["tag"] Syn.Add_tag;
+  Builtins.register_builtin ["meta"] Syn.Set_meta;
+  Builtins.register_builtin ["date"] Syn.Add_date;
+  Builtins.register_builtin ["ref"] Syn.Ref;
+  Builtins.register_builtin ["transclude"] @@ Syn.Transclude;
+  Builtins.register_builtin ["tex"] @@ Syn.Embed_tex;
+
+  Builtins.register_builtin ["p"] @@ Syn.Prim `P;
+  Builtins.register_builtin ["em"] @@ Syn.Prim `Em;
+  Builtins.register_builtin ["strong"] @@ Syn.Prim `Strong;
+  Builtins.register_builtin ["li"] @@ Syn.Prim `Li;
+  Builtins.register_builtin ["ol"] @@ Syn.Prim `Ol;
+  Builtins.register_builtin ["ul"] @@ Syn.Prim `Ul;
+  Builtins.register_builtin ["code"] @@ Syn.Prim `Code;
+  Builtins.register_builtin ["blockquote"] @@ Syn.Prim `Blockquote;
+  Builtins.register_builtin ["pre"] @@ Syn.Prim `Pre;
+
   Builtins.Transclude.alloc_title ();
   Builtins.Transclude.alloc_taxon ();
   Builtins.Transclude.alloc_expanded ();

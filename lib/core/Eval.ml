@@ -29,6 +29,15 @@ let get_transclusion_opts () =
   let show_metadata = get_bool Expand.Builtins.Transclude.show_metadata_sym false in
   Sem.{title_override; taxon_override; toc; show_heading; expanded; numbered; show_metadata}
 
+let pop_arg ~loc rest =
+  match rest with
+  | Range.{value = Syn.Group (Braces, arg); _} :: rest ->
+    arg, rest
+  | Range.{value = Syn.Verbatim str; _} as node :: rest ->
+    [node], rest
+  | _ ->
+    Reporter.fatalf ?loc Type_error "Expected argument"
+
 let rec eval : Syn.t -> Sem.t =
   function
   | [] -> []
@@ -42,15 +51,23 @@ and eval_node : Syn.node Range.located -> Syn.t -> Sem.t =
     let title = Option.map eval title in
     {node with value = Sem.Link (eval_addr dest, title, Identity)} :: eval rest
 
-  | Ref dest ->
-    let addr = eval_addr dest in
+  | Ref ->
+    let arg, rest = pop_arg ~loc:node.loc rest in
+    let addr = eval_addr arg in
     {node with value = Sem.Ref addr} :: eval rest
+
+  | Transclude ->
+    let opts = get_transclusion_opts () in
+    let arg, rest = pop_arg ~loc:node.loc rest in
+    let addr = eval_addr arg in
+    {node with value = Sem.Transclude (opts, addr)} :: eval rest
 
   | Math (mmode, e) ->
     {node with value = Sem.Math (mmode, eval e)} :: eval rest
 
-  | Prim (p, body) ->
-    {node with value = Sem.Prim (p, eval_trim body)} :: eval rest
+  | Prim p ->
+    let arg, rest = pop_arg ~loc:node.loc rest in
+    {node with value = Sem.Prim (p, eval_trim arg)} :: eval rest
 
   | Xml_tag (name, attrs, body) ->
     let rec process attrs = match attrs with
@@ -68,11 +85,6 @@ and eval_node : Syn.node Range.located -> Syn.t -> Sem.t =
 
   | TeX_cs cs ->
     {node with value = Sem.TeX_cs cs} :: eval rest
-
-  | Transclude addr ->
-    let opts = get_transclusion_opts () in
-    let addr = eval_addr addr in
-    {node with value = Sem.Transclude (opts, addr)} :: eval rest
 
   | Subtree (addr, nodes) ->
     let addr =
@@ -104,9 +116,6 @@ and eval_node : Syn.node Range.located -> Syn.t -> Sem.t =
     in
     let query = Query.map eval query in
     {node with value = Sem.Query (opts, query)} :: eval rest
-
-  | Embed_tex {preamble; source} ->
-    {node with value = Sem.Embed_tex {preamble = eval preamble; source = eval source}} :: eval rest
 
   | Lam (xs, body) ->
     let rec loop xs rest =
@@ -240,63 +249,87 @@ and eval_node : Syn.node Range.located -> Syn.t -> Sem.t =
   | Group _ | Text _ ->
     eval_textual @@ node :: rest
 
-  | Title title ->
-    let title = eval title in
+  | Embed_tex ->
+    let preamble, rest = pop_arg ~loc:node.loc rest in
+    let source, rest = pop_arg ~loc:node.loc rest in
+    {node with value = Sem.Embed_tex {preamble = eval preamble; source = eval source}} :: eval rest
+
+  | Set_title ->
+    let arg, rest = pop_arg ~loc:node.loc rest in
+    let title = eval arg in
     Fm.modify (fun fm -> {fm with title = Some title});
     eval rest
 
-  | Parent addr ->
-    Fm.modify (fun fm -> {fm with designated_parent = Some (User_addr addr)});
+  | Set_parent ->
+    let arg, rest = pop_arg ~loc:node.loc rest in
+    let addr = eval_addr arg in
+    Fm.modify (fun fm -> {fm with designated_parent = Some addr});
     eval rest
 
-  | Meta (k, v) ->
+  | Set_taxon ->
+    let arg, rest = pop_arg ~loc:node.loc rest in
+    let taxon = eval_as_string arg in
     begin
-      let v = eval v in
       Fm.modify @@ fun fm ->
-      {fm with metas = fm.metas @ [k,v]}
+      {fm with taxon = Some taxon}
     end;
     eval rest
 
-  | Author author ->
+
+  | Add_author ->
+    let arg, rest = pop_arg ~loc:node.loc rest in
+    let author = eval_addr arg in
     begin
       Fm.modify @@ fun fm ->
-      {fm with authors = fm.authors @ [User_addr author]}
+      {fm with authors = fm.authors @ [author]}
     end;
     eval rest
 
-  | Contributor author ->
+  | Add_contributor ->
+    let arg, rest = pop_arg ~loc:node.loc rest in
+    let author = eval_addr arg in
     begin
       Fm.modify @@ fun fm ->
-      {fm with contributors = fm.contributors @ [User_addr author]}
+      {fm with contributors = fm.contributors @ [author]}
     end;
     eval rest
 
-  | Tag tag ->
+
+  | Add_tag ->
+    let arg, rest = pop_arg ~loc:node.loc rest in
+    let tag = eval_as_string arg in
     begin
       Fm.modify @@ fun fm ->
       {fm with tags = fm.tags @ [tag]}
     end;
     eval rest
 
-  | Date date ->
-    let date = Date.parse date in
+  | Set_meta ->
+    let argk, rest = pop_arg ~loc:node.loc rest in
+    let argv, rest = pop_arg ~loc:node.loc rest in
+    let k = eval_as_string argk in
+    let v = eval argv in
+    begin
+      Fm.modify @@ fun fm ->
+      {fm with metas = fm.metas @ [k,v]}
+    end;
+    eval rest
+
+  | Add_date ->
+    let arg, rest = pop_arg ~loc:node.loc rest in
+    let date = Date.parse @@ eval_as_string arg in
     begin
       Fm.modify @@ fun fm ->
       {fm with dates = fm.dates @ [date]}
     end;
     eval rest
 
-  | Number num ->
+  | Set_number ->
+    let arg, rest = pop_arg ~loc:node.loc rest in
+    let num = eval_as_string arg in
     begin
       Fm.modify @@ fun fm ->
       {fm with number = Some num}
-    end;
-    eval rest
-
-  | Taxon taxon ->
-    begin
-      Fm.modify @@ fun fm ->
-      {fm with taxon = Some taxon}
     end;
     eval rest
 

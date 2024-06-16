@@ -1,24 +1,18 @@
 %{
   open Forester_prelude
   open Forester_core
-
-  let split_xml_qname str =
-    match String.split_on_char ':' str with
-    | [prefix; uname] -> Some prefix, uname
-    | [uname] -> None, uname
-    | _ -> failwith "split_xml_qname"
 %}
 
-%token <string> XML_ELT_IDENT
 %token <string> DECL_XMLNS
 %token <string> TEXT VERBATIM
 %token <string> WHITESPACE
-%token <string> IDENT
-%token <Forester_core.Prim.t> PRIM
-%token TITLE PARENT IMPORT EXPORT DEF TAXON AUTHOR CONTRIBUTOR TAG DATE NUMBER NAMESPACE LET TEX META OPEN
+%token <string> BSLASH_IDENT
+%token BSLASH_LANGLE
+%token IMPORT EXPORT DEF NAMESPACE LET OPEN
 %token OBJECT PATCH CALL
-%token TRANSCLUDE SUBTREE SCOPE PUT GET DEFAULT ALLOC REF
-%token LBRACE RBRACE LSQUARE RSQUARE LPAREN RPAREN HASH_LBRACE HASH_HASH_LBRACE
+%token SLASH HASH DOLLAR COMMA SEMI COLON
+%token SUBTREE SCOPE PUT GET DEFAULT ALLOC
+%token LBRACE RBRACE LANGLE RANGLE LSQUARE RSQUARE LPAREN RPAREN HASH_LBRACE HASH_HASH_LBRACE
 %token QUERY_AND QUERY_OR QUERY_NOT QUERY_AUTHOR QUERY_TAG QUERY_TAXON QUERY_META
 %token QUERY_TREE
 %token EOF
@@ -30,14 +24,17 @@
 let locate(p) ==
 | x = p; { Asai.Range.locate_lex $loc x }
 
-let braces(p) == delimited(LBRACE, p, RBRACE)
-let squares(p) == delimited(LSQUARE, p, RSQUARE)
-let parens(p) == delimited(LPAREN, p, RPAREN)
+let cons(p, q) ==
+| x = p; xs = q; { x :: xs }
+
+let braces(p) := delimited(LBRACE, p, RBRACE)
+let squares(p) := delimited(LSQUARE, p, RSQUARE)
+let parens(p) := delimited(LPAREN, p, RPAREN)
 
 let bvar :=
 | x = TEXT; { [x] }
 
-let binder == list(squares(bvar))
+let binder := list(squares(bvar))
 
 let ws_or(p) :=
 | WHITESPACE; { [] }
@@ -45,79 +42,98 @@ let ws_or(p) :=
 
 let ws_list(p) := flatten(list(ws_or(p)))
 
-let textual_node :=
-| ~ = TEXT; <Code.Text>
-| ~ = WHITESPACE; <Code.Text>
-| ~ = head_node; <Fun.id>
-
 let code_expr == ws_list(locate(head_node))
-let textual_expr == list(locate(textual_node))
 
-let head_node :=
-| TITLE; ~ = arg; <Code.Title>
-| PARENT; ~ = txt_arg; <Code.Parent>
-| AUTHOR; ~ = txt_arg; <Code.Author>
-| CONTRIBUTOR; ~ = txt_arg; <Code.Contributor>
-| DATE; ~ = txt_arg; <Code.Date>
-| NUMBER; ~ = txt_arg; <Code.Number>
+let text_or_ws :=
+| TEXT
+| WHITESPACE
+
+let symbol_safe :=
+| DOLLAR; { "$" }
+| COMMA; { "," }
+| SEMI; { ";" }
+| COLON; { ":" }
+| LANGLE; { "<" }
+| RANGLE; { ">" }
+
+// these symbols are used for hierarchical names and method call chains, so they can't appear
+// directly after an "unsafe" head.
+let symbol_unsafe :=
+| SLASH; { "/" }
+| HASH; { "#" }
+
+let as_text_node(p) ==
+| ~ = p; <Code.Text>
+
+let as_verbatim_node(p) ==
+| ~ = p; <Code.Verbatim>
+
+let body :=
+| body1
+| cons(locate(as_text_node(symbol_unsafe)), body)
+
+let body1 :=
+| cons(locate(as_text_node(text_or_ws)), body)
+| cons(locate(as_text_node(symbol_safe)), body)
+| cons(locate(head_node_safe), body)
+| cons(locate(head_node_unsafe), body1)
+| { [] }
+
+
+let head_node_safe :=
 | DEF; (~,~,~) = fun_spec; <Code.Def>
-| ALLOC; ~ = ident; <Code.Alloc>
-| TAXON; ~ = txt_arg; <Code.Taxon>
-| META; ~ = txt_arg; ~ = arg; <Code.Meta>
+| NAMESPACE; ~ = namespaced_ident; ~ = braces(code_expr); <Code.Namespace>
+| SUBTREE; ~ = option(squares(wstext)); ~ = braces(body); <Code.Subtree>
 | IMPORT; ~ = txt_arg; <Code.import_private>
 | EXPORT; ~ = txt_arg; <Code.import_public>
-| TAG; ~ = txt_arg; <Code.Tag>
-| NAMESPACE; ~ = ident; ~ = braces(code_expr); <Code.Namespace>
-| TRANSCLUDE; ~ = arg; <Code.Transclude>
-| SUBTREE; addr = option(squares(wstext)); body = braces(ws_list(locate(head_node))); <Code.Subtree>
 | LET; (~,~,~) = fun_spec; <Code.Let>
-| TEX; pkgs = arg; src = arg; <Code.Embed_tex>
-| (~,~) = ident_with_method_calls; <Code.Ident>
 | SCOPE; ~ = arg; <Code.Scope>
-| PUT; ~ = ident; ~ = arg; <Code.Put>
-| DEFAULT; ~ = ident; ~ = arg; <Code.Default>
-| GET; ~ = ident; <Code.Get>
-| OPEN; ~ = ident; <Code.Open>
+| PUT; ~ = namespaced_ident; ~ = arg; <Code.Put>
+| DEFAULT; ~ = namespaced_ident; ~ = arg; <Code.Default>
 | QUERY_TREE; ~ = braces(query); <Code.Query>
-| name = XML_ELT_IDENT; attrs = list(xml_attr); body = arg; {
-  let name = split_xml_qname name in
-  Code.Xml_tag (name, attrs, body)
-}
+| BSLASH_LANGLE; ~ = xml_qident; RANGLE; ~ = list(xml_attr); ~ = arg; <Code.Xml_tag>
 | ~ = DECL_XMLNS; ~ = txt_arg; <Code.Decl_xmlns>
-| OBJECT; self = option(squares(bvar)); methods = braces(ws_list(method_decl)); { Code.Object {self;  methods } }
+| OBJECT; self = option(squares(bvar)); methods = braces(ws_list(method_decl)); { Code.Object {self; methods} }
 | PATCH; obj = braces(code_expr); self = option(squares(bvar)); methods = braces(ws_list(method_decl)); { Code.Patch {obj; self; methods} }
 | CALL; ~ = braces(code_expr); ~ = txt_arg; <Code.Call>
-| ~ = PRIM; ~ = arg; <Code.Prim>
-| REF; ~ = arg; <Code.Ref>
-| ~ = delimited(HASH_LBRACE, textual_expr, RBRACE); <Code.inline_math>
-| ~ = delimited(HASH_HASH_LBRACE, textual_expr, RBRACE); <Code.display_math>
-| ~ = braces(textual_expr); <Code.braces>
-| ~ = squares(textual_expr); <Code.squares>
-| ~ = parens(textual_expr); <Code.parens>
+| ~ = delimited(HASH_LBRACE, body, RBRACE); <Code.inline_math>
+| ~ = delimited(HASH_HASH_LBRACE, body, RBRACE); <Code.display_math>
+| ~ = braces(body); <Code.braces>
+| ~ = squares(body); <Code.squares>
+| ~ = parens(body); <Code.parens>
 | ~ = VERBATIM; <Code.Verbatim>
 
-
-let method_decl :=
-| k = squares(TEXT); list(WHITESPACE); v = arg; { k, v }
+let xml_qident :=
+| prefix = TEXT; COLON; name = TEXT; { Some prefix, name }
+| name = TEXT; { None, name }
 
 let xml_attr :=
-| k = squares(TEXT); v = arg; { (split_xml_qname k, v) }
+  pair(squares(xml_qident), arg)
 
-let ident :=
-| ident = IDENT;
- { String.split_on_char '/' ident }
+// These nodes have an undelimited backslashed identifier, and so we cannot allow
+// arbitrary slashes or hashes after them due to potential ambiguity. For example,
+// we want to interpret `\foo/bar` as an invocation to the hierarchical name `foo/bar`
+// rather than an invocation to the name `foo` followed by the text `/bar`.
+let head_node_unsafe :=
+| ALLOC; ~ = namespaced_ident; <Code.Alloc>
+| GET; ~ = namespaced_ident; <Code.Get>
+| OPEN; ~ = namespaced_ident; <Code.Open>
+| (~,~) = namespaced_ident_with_methods; <Code.Ident>
 
-let ident_with_method_calls :=
-| ident = IDENT;
-  { match String.split_on_char '#' ident with
-    | [x] -> String.split_on_char '/' x, []
-    | "" :: xs -> ["#"], List.filter (fun x -> x <> "") xs
-    | x :: xs -> String.split_on_char '/' x, List.filter (fun x -> x <> "") xs
-    | [] -> [], []
-   }
+let head_node :=
+| head_node_unsafe
+| head_node_safe
 
+let namespaced_ident :=
+  cons(BSLASH_IDENT,loption(preceded(SLASH,separated_nonempty_list(SLASH, TEXT))))
 
-let query0 :=
+let namespaced_ident_with_methods :=
+  pair(namespaced_ident, loption(preceded(HASH,separated_nonempty_list(HASH,TEXT))))
+
+let method_decl :=
+  separated_pair(squares(TEXT), list(WHITESPACE), arg)
+
+let query_node :=
 | QUERY_AUTHOR; ~ = arg; <Query.Author>
 | QUERY_TAG; ~ = arg; <Query.Tag>
 | QUERY_TAXON; ~ = arg; <Query.Taxon>
@@ -126,25 +142,28 @@ let query0 :=
 | QUERY_NOT; ~ = braces(query); <Query.Not>
 | QUERY_META; k = txt_arg; v = arg; <Query.Meta>
 
-let queries == ws_list(query0)
+let queries == ws_list(query_node)
 
-let query := list(WHITESPACE); q = query0; list(WHITESPACE); {q}
+let query :=
+  delimited(list(WHITESPACE), query_node, list(WHITESPACE))
 
 let ws_or_text :=
-| x = TEXT; { x }
-| x = WHITESPACE; { x }
+| TEXT
+| WHITESPACE
+| symbol_safe
+| symbol_unsafe
 
 let wstext :=
 | xs = list(ws_or_text); { String.concat "" xs }
 
+
 let arg :=
-| braces(textual_expr)
-| located_str = locate(VERBATIM);
-  { [{located_str with value = Code.Verbatim located_str.value}] }
+| braces(body)
+| x = locate(as_verbatim_node(VERBATIM)); { [x] }
 
 
 let txt_arg == braces(wstext)
-let fun_spec == ~ = ident; ~ = binder; ~ = arg; <>
+let fun_spec == ~ = namespaced_ident; ~ = binder; ~ = arg; <>
 
 let main :=
-| ~ = ws_list(locate(head_node)); EOF; <>
+| ~ = body; EOF; <>

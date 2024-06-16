@@ -17,7 +17,6 @@ let string_of_token token =
   | Grammar.WHITESPACE w -> w
   | Grammar.TEXT s -> s
   | Grammar.EOF -> "EOF"
-  | Grammar.IDENT s -> Format.sprintf "IDENT(%s)" s
   | _ -> "<unimplemented>"
 
 let char_of_token token =
