@@ -137,7 +137,12 @@ let parse_channel filename ch =
   Reporter.tracef "when parsing file `%s`" filename @@ fun () ->
   let lexbuf = Lexing.from_channel ch in
   lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
-  maybe_with_errors (fun () -> try_parse lexbuf)
+  match Grammar.main Lexer.token lexbuf with
+  | code ->
+    Result.ok code
+  | exception Grammar.Error ->
+    let loc = Asai.Range.of_lexbuf lexbuf in
+    Reporter.fatalf ~loc Parse_error "failed to parse `%s`" (Lexing.lexeme lexbuf)
 
 let parse_file fp =
   let filename = Eio.Path.native_exn fp in
