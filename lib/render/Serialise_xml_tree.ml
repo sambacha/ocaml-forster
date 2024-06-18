@@ -59,7 +59,7 @@ and render_frontmatter (fm : _ X.frontmatter) =
     fm.taxon |> F.optional @@ F.taxon [] "%s";
     fm.source_path |> F.optional @@ F.source_path [] "%s";
     fm.dates |> List.map render_date |> F.null;
-    fm.attributions |> List.map render_attribution_elt |> F.null;
+    F.authors [] [fm.attributions |> List.map render_attribution_elt |> F.null];
     fm.number |> F.optional @@ F.number [] "%s";
     fm.designated_parent |> F.optional @@ F.parent [] "%s";
     fm.metas |> List.map render_meta |> F.null
