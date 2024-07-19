@@ -176,9 +176,9 @@ struct
 
   let pop_arg_opt rest =
     match rest with
-    | Range.{value = Syn.Group (Braces, arg); _} as node :: rest ->
+    | Range.{value = Sem.Group (Braces, arg); _} as node :: rest ->
       Some ({node with value = arg}, rest)
-    | Range.{value = (Syn.Sym _ | Syn.Verbatim _ | Syn.Var _ | Syn.Math _); _} as node :: rest ->
+    | Range.{value = (Sem.Sym _ | Sem.Verbatim _); _} as node :: rest ->
       Some ({node with value = [node]}, rest)
     | _ -> None
 
@@ -199,38 +199,37 @@ struct
   let rec eval : Syn.t -> Sem.t =
     function
     | [] -> []
-    | node :: rest ->
-      eval_node node rest
+    | x :: xs ->
+      eval_node x (eval xs)
 
-  and eval_node : Syn.node Range.located -> Syn.t -> Sem.t =
-    fun node rest ->
+  and eval_node node rest =
     match node.value with
     | Link {title; dest} ->
       let scope = Scope.get () in
-      let dest = eval_addr {node with value = dest} in
+      let dest = to_addr @@ eval dest in
       Graphs.add_edge Q.Rel.links ~source:scope ~target:dest;
       let title = Option.map eval title in
-      {node with value = Sem.Link (dest, title, Identity)} :: eval rest
+      {node with value = Sem.Link (dest, title, Identity)} << rest
 
     | Ref ->
       let dest, rest = pop_arg ~loc:node.loc rest in
       let scope = Scope.get () in
-      let dest = eval_addr dest in
+      let dest = to_addr dest.value in
       Graphs.add_edge Q.Rel.links ~source:scope ~target:dest;
-      {node with value = Sem.Ref dest} :: eval rest
+      {node with value = Sem.Ref dest} << rest
 
     | Query_polarity pol ->
-      {node with value = Sem.Query_polarity pol} :: eval rest
+      {node with value = Sem.Query_polarity pol} << rest
 
     | Query_mode mode ->
-      {node with value = Sem.Query_mode mode} :: eval rest
+      {node with value = Sem.Query_mode mode} << rest
 
     | Math (mmode, e) ->
-      {node with value = Sem.Math (mmode, eval e)} :: eval rest
+      {node with value = Sem.Math (mmode, eval e)} << rest
 
     | Prim p ->
       let arg, rest = pop_arg ~loc:node.loc rest in
-      {node with value = Sem.Prim (p, eval_trim arg.value)} :: eval rest
+      {node with value = Sem.Prim (p, Sem.trim_whitespace arg.value)} << rest
 
     | Xml_tag (name, attrs, body) ->
       let rec process attrs = match attrs with
@@ -244,18 +243,18 @@ struct
           end else
             (k, eval v) :: processed
       in
-      {node with value = Sem.Xml_tag (name, process attrs, eval body)} :: eval rest
+      {node with value = Sem.Xml_tag (name, process attrs, eval body)} << rest
 
     | TeX_cs cs ->
-      {node with value = Sem.TeX_cs cs} :: eval rest
+      {node with value = Sem.TeX_cs cs} << rest
 
     | Transclude ->
       let arg, rest = pop_arg ~loc:node.loc rest in
-      let addr = eval_addr arg in
+      let addr = to_addr arg.value in
       let scope = Scope.get () in
       Graphs.add_edge Q.Rel.transclusion ~source:scope ~target:addr;
       let opts = get_transclusion_opts () in
-      {node with value = Sem.Transclude (opts, addr)} :: eval rest
+      {node with value = Sem.Transclude (opts, addr)} << rest
 
     | Subtree (addr, nodes) ->
       let addr =
@@ -273,7 +272,7 @@ struct
         Emitted_trees.modify @@ fun trees ->
         subtree :: trees
       end;
-      {node with value = Sem.Subtree (opts, subtree)} :: eval rest
+      {node with value = Sem.Subtree (opts, subtree)} << rest
 
     | Query_tree ->
       let arg, rest = pop_arg ~loc:node.loc rest in
@@ -283,32 +282,17 @@ struct
         | None -> {opts with show_heading = false; toc = false}
         | Some _ -> opts
       in
-      let query = eval_query_expr arg in
-      {node with value = Sem.Query_tree (opts, query)} :: eval rest
+      let query = extract_query_expr arg in
+      {node with value = Sem.Query_tree (opts, query)} << rest
 
     | Embed_tex ->
       let preamble, rest = pop_arg ~loc:node.loc rest in
       let source, rest = pop_arg ~loc:node.loc rest in
-      {node with value = Sem.Embed_tex {preamble = eval preamble.value; source = eval source.value}} :: eval rest
+      {node with value = Sem.Embed_tex {preamble = preamble.value; source = source.value}} << rest
 
-    | Lam (xs, body) ->
-      let rec loop xs rest =
-        match xs with
-        | [] -> eval body, rest
-        | x :: xs ->
-          begin
-            match pop_arg_opt rest with
-            | Some (u, rest) ->
-              Lex_env.scope (Env.add x (eval u.value)) @@ fun () ->
-              loop xs rest
-            | None ->
-              Reporter.fatalf Type_error ?loc:node.loc
-                "expected function to be applied to `%i` additional arguments"
-                (List.length (x :: xs))
-          end
-      in
-      let body, rest = loop xs rest in
-      body @ eval rest
+    | Fun (xs, body) ->
+      let env = Lex_env.read () in
+      {node with value = Sem.Clo (env, xs, body)} << rest
 
     | Object {self; methods} ->
       let table =
@@ -321,7 +305,7 @@ struct
       in
       let sym = Symbol.fresh ["obj"] in
       Heap.modify @@ Env.add sym Sem.{prototype = None; methods = table};
-      {node with value = Sem.Object sym} :: eval rest
+      {node with value = Sem.Object sym} << rest
 
     | Patch {obj; self; super; methods} ->
       begin
@@ -337,7 +321,7 @@ struct
           in
           let sym = Symbol.fresh ["obj"] in
           Heap.modify @@ Env.add sym Sem.{prototype = Some obj_ptr; methods = table};
-          {node with value = Sem.Object sym} :: eval rest
+          {node with value = Sem.Object sym} << rest
         | xs ->
           Reporter.fatalf ?loc:node.loc Type_error
             "tried to patch non-object"
@@ -372,7 +356,7 @@ struct
                   "tried to call unbound method `%s`" method_name
           in
           let result = call_method @@ Env.find sym @@ Heap.get () in
-          result @ eval rest
+          result <<* rest
         | xs ->
           Reporter.fatalf ?loc:node.loc Type_error
             "tried to call method `%s` on non-object: %a" method_name Sem.pp xs
@@ -385,7 +369,7 @@ struct
           Reporter.fatalf ?loc:node.loc Resolution_error
             "could not find variable named %a"
             Symbol.pp x
-        | Some v -> v @ eval rest
+        | Some v -> v <<* rest
       end
 
     | Put (k, v, body) ->
@@ -394,7 +378,7 @@ struct
         Dyn_env.scope (Env.add k @@ eval v) @@ fun () ->
         eval body
       in
-      body @ eval rest
+      body <<* rest
 
     | Default (k, v, body) ->
       let k = eval_sym {node with value = k} in
@@ -403,7 +387,7 @@ struct
         Dyn_env.scope upd @@ fun () ->
         eval body
       in
-      body @ eval rest
+      body <<* rest
 
     | Get key ->
       let key = eval_sym {node with value = key} in
@@ -415,155 +399,186 @@ struct
           Reporter.fatalf ?loc:node.loc Resolution_error
             "could not find fluid binding named %a"
             Symbol.pp key
-        | Some v -> v @ eval rest
+        | Some v -> v <<* rest
       end
 
     | Verbatim str ->
-      {node with value = Sem.Verbatim str} :: eval rest
+      {node with value = Sem.Verbatim str} << rest
 
-    | Group _ | Text _ ->
-      eval_textual @@ node :: rest
+    | Text str ->
+      {node with value = Sem.Text str} << rest
+
+    | Group (d, xs) ->
+      {node with value = Sem.Group (d, eval xs)} << rest
 
     | Title ->
       let title, rest = pop_arg ~loc:node.loc rest in
-      let title = eval title.value in
-      Fm.modify (fun fm -> {fm with title = Some title});
-      eval rest
+      Fm.modify (fun fm -> {fm with title = Some title.value});
+      rest
 
     | Parent ->
       let arg, rest = pop_arg ~loc:node.loc rest in
-      let addr = eval_addr arg in
+      let addr = to_addr arg.value in
       Fm.modify (fun fm -> {fm with designated_parent = Some addr});
-      eval rest
+      rest
 
     | Meta ->
       let argk, rest = pop_arg ~loc:node.loc rest in
       let argv, rest = pop_arg ~loc:node.loc rest in
-      let k = eval_as_string argk in
-      let v = eval argv.value in
+      let k = Sem.string_of_nodes argk.value in
+      let v = argv.value in
       Fm.modify (fun fm -> {fm with metas = fm.metas @ [k,v]});
-      eval rest
+      rest
 
     | Author ->
       let arg, rest = pop_arg ~loc:node.loc rest in
-      let addr = eval_addr arg in
+      let addr = to_addr arg.value in
       let scope = Scope.get () in
       Graphs.add_edge Q.Rel.authors ~source:scope ~target:addr;
       Fm.modify (fun fm -> {fm with authors = fm.authors @ [addr]});
-      eval rest
+      rest
 
     | Contributor ->
       let arg, rest = pop_arg ~loc:node.loc rest in
-      let addr = eval_addr arg in
+      let addr = to_addr arg.value in
       let scope = Scope.get () in
       Graphs.add_edge Q.Rel.contributors ~source:scope ~target:addr;
       Fm.modify (fun fm -> {fm with contributors = fm.contributors @ [addr]});
-      eval rest
+      rest
 
     | Tag ->
       let arg, rest = pop_arg ~loc:node.loc rest in
-      let tag = eval_as_string arg in
+      let tag = Sem.string_of_nodes arg.value in
       let scope = Scope.get () in
       Graphs.add_edge Q.Rel.tags ~source:scope ~target:(User_addr tag);
       Fm.modify (fun fm -> {fm with tags = fm.tags @ [tag]});
-      eval rest
+      rest
 
     | Date ->
       let arg, rest = pop_arg ~loc:node.loc rest in
-      let date = eval_as_string arg in
+      let date = Sem.string_of_nodes arg.value in
       begin
         match Date.parse date with
         | None ->
           Reporter.fatalf Parse_error "Invalid date string `%s`" date
         | Some date ->
           Fm.modify (fun fm -> {fm with dates = fm.dates @ [date]});
-          eval rest
+          rest
       end
 
     | Number ->
       let arg, rest = pop_arg ~loc:node.loc rest in
-      let num = eval_as_string arg in
+      let num = Sem.string_of_nodes arg.value in
       Fm.modify (fun fm -> {fm with number = Some num});
-      eval rest
+      rest
 
     | Taxon ->
       let arg, rest = pop_arg ~loc:node.loc rest in
-      let taxon = eval_as_string arg in
+      let taxon = Sem.string_of_nodes arg.value in
       let scope = Scope.get () in
       Graphs.add_edge Q.Rel.taxa ~source:scope ~target:(User_addr taxon);
       Fm.modify (fun fm -> {fm with taxon = Some taxon});
-      eval rest
+      rest
 
     | Query_rel ->
       let arg_mode, rest = pop_arg ~loc:node.loc rest in
       let arg_pol, rest = pop_arg ~loc:node.loc rest in
       let arg_sym, rest = pop_arg ~loc:node.loc rest in
       let arg_addr, rest = pop_arg ~loc:node.loc rest in
-      let mode = eval_query_mode arg_mode in
-      let pol = eval_query_polarity arg_pol in
-      let sym = eval_sym arg_sym in
-      let addr = eval_addr arg_addr in
-      {node with value = Sem.Query (Q.rel mode pol sym addr)} :: eval rest
+      let mode = extract_query_mode arg_mode in
+      let pol = extract_query_polarity arg_pol in
+      let sym = extract_sym arg_sym in
+      let addr = to_addr arg_addr.value in
+      {node with value = Sem.Query (Q.rel mode pol sym addr)} << rest
 
     | Query_isect ->
       let args, rest = pop_args rest in
-      let args = List.map eval_query_expr args in
-      {node with value = Sem.Query (Q.isect args)} :: eval rest
+      let args = List.map extract_query_expr args in
+      {node with value = Sem.Query (Q.isect args)} << rest
 
     | Query_union ->
       let args, rest = pop_args rest in
-      let args = List.map eval_query_expr args in
-      {node with value = Sem.Query (Q.union args)} :: eval rest
+      let args = List.map extract_query_expr args in
+      {node with value = Sem.Query (Q.union args)} << rest
 
     | Query_compl ->
       let arg, rest = pop_arg ~loc:node.loc rest in
-      let q = eval_query_expr arg in
-      {node with value = Sem.Query (Q.complement q)} :: eval rest
+      let q = extract_query_expr arg in
+      {node with value = Sem.Query (Q.complement q)} << rest
 
     | Query_isect_fam ->
       let argq, rest = pop_arg ~loc:node.loc rest in
       let arg_mode, rest = pop_arg ~loc:node.loc rest in
       let arg_pol, rest = pop_arg ~loc:node.loc rest in
       let arg_sym, rest = pop_arg ~loc:node.loc rest in
-      let q = eval_query_expr argq in
-      let mode = eval_query_mode arg_mode in
-      let pol = eval_query_polarity arg_pol in
-      let sym = eval_sym arg_sym in
-      {node with value = Sem.Query (Q.isect_fam q mode pol sym)} :: eval rest
+      let q = extract_query_expr argq in
+      let mode = extract_query_mode arg_mode in
+      let pol = extract_query_polarity arg_pol in
+      let sym = extract_sym arg_sym in
+      {node with value = Sem.Query (Q.isect_fam q mode pol sym)} << rest
 
     | Query_union_fam ->
       let argq, rest = pop_arg ~loc:node.loc rest in
       let arg_mode, rest = pop_arg ~loc:node.loc rest in
       let arg_pol, rest = pop_arg ~loc:node.loc rest in
       let arg_sym, rest = pop_arg ~loc:node.loc rest in
-      let q = eval_query_expr argq in
-      let mode = eval_query_mode arg_mode in
-      let pol = eval_query_polarity arg_pol in
-      let sym = eval_sym arg_sym in
-      {node with value = Sem.Query (Q.union_fam q mode pol sym)} :: eval rest
+      let q = extract_query_expr argq in
+      let mode = extract_query_mode arg_mode in
+      let pol = extract_query_polarity arg_pol in
+      let sym = extract_sym arg_sym in
+      {node with value = Sem.Query (Q.union_fam q mode pol sym)} << rest
 
     | Query_builtin builtin ->
       let arg, rest = pop_arg ~loc:node.loc rest in
-      let addr = eval_addr arg in
+      let addr = to_addr arg.value in
       let q =
         match builtin with
         | `Taxon -> Q.rel Edges Incoming Q.Rel.taxa addr
         | `Author -> Q.rel Edges Incoming Q.Rel.authors addr
         | `Tag -> Q.rel Edges Incoming Q.Rel.tags addr
       in
-      {node with value = Sem.Query q} :: eval rest
+      {node with value = Sem.Query q} << rest
 
     | Sym sym ->
-      {node with value = Sem.Sym sym} :: eval rest
+      {node with value = Sem.Sym sym} << rest
 
-  and eval_query_polarity x =
-    match eval_strip x.value with
-    | [{value = Query_polarity pol; _}] -> pol
+  and (<<*) nodes rest =
+    match nodes with
+    | [] -> rest
+    | x :: xs -> x << xs @ rest
+
+  and (<<) node (rest : Sem.t)  =
+    match Range.(node.value) with
+    | Clo (env, xs, body) ->
+      let rec loop env xs rest =
+        match xs with
+        | [] ->
+          let result =
+            Lex_env.run ~env @@ fun () ->
+            eval body
+          in
+          result <<* rest
+        | (x :: xs) as ys ->
+          begin
+            match pop_arg_opt rest with
+            | Some (u, rest) ->
+              loop (Env.add x u.value env) xs rest
+            | None ->
+              let clo = [Range.locate_opt node.loc @@ Sem.Clo (env, ys, body)] in
+              clo @ rest
+          end
+      in
+      loop env xs rest
+    | _ ->
+      node :: rest
+  and extract_query_mode x =
+    match Sem.strip_whitespace x.value with
+    | [{value = Query_mode mode; _}] -> mode
     | _ -> Reporter.fatalf ?loc:x.loc Type_error "Expected polarity in query expression"
 
-  and eval_query_mode x =
-    match eval_strip x.value with
-    | [{value = Query_mode mode; _}] -> mode
+  and extract_query_polarity x =
+    match Sem.strip_whitespace x.value with
+    | [{value = Query_polarity pol; _}] -> pol
     | _ -> Reporter.fatalf ?loc:x.loc Type_error "Expected polarity in query expression"
 
 
@@ -571,41 +586,22 @@ struct
 
   and eval_trim xs = Sem.trim_whitespace @@ eval xs
 
-  and eval_textual ?(prefix = []) : Syn.t -> Sem.t =
-    function
-    | {value = Group (d, xs); _} :: rest ->
-      let l, r =
-        match d with
-        | Braces -> "{", "}"
-        | Squares -> "[", "]"
-        | Parens -> "(", ")"
-      in
-      eval_textual ~prefix:(l :: prefix) @@ xs @ Asai.Range.locate_opt None (Syn.Text r) :: rest
-    | {value = Text x; _} :: rest ->
-      eval_textual ~prefix:(x :: prefix) @@ rest
-    | rest ->
-      let txt = String.concat "" @@ List.rev prefix in
-      Range.locate_opt None (Sem.Text txt) :: eval rest
-
   and eval_sym (x : Syn.t Range.located)  =
-    match eval_strip x.value with
+    extract_sym {x with value = eval x.value}
+
+  and extract_sym x =
+    match Sem.strip_whitespace x.value with
     | [{value = Sem.Sym sym; _}] -> sym
     | _ -> Reporter.fatalf ?loc:x.loc Type_error "Expected symbol here"
 
-  and eval_query_expr x =
-    let extract =
-      function
-      | [Range.{value = Sem.Query q; _}] -> q
-      | u -> Reporter.fatalf ?loc:x.loc Type_error "Failed to evaluate query expression, got %a" Sem.pp u
-    in
-    extract @@ eval_strip x.value
 
+  and extract_query_expr (x : Sem.t Range.located) =
+    match Sem.strip_whitespace x.value with
+    | [Range.{value = Sem.Query q; _}] -> q
+    | u -> Reporter.fatalf ?loc:x.loc Type_error "Failed to evaluate query expression, got %a" Sem.pp u
 
-  and eval_as_string x =
-    Sem.string_of_nodes @@ eval_textual x.value
-
-  and eval_addr x =
-    User_addr (eval_as_string x)
+  and to_addr (x : Sem.t) =
+    User_addr (Sem.string_of_nodes x)
 
   and eval_tree_inner ~addr (tree : Syn.tree) : Sem.tree =
     Graphs.register_addr addr;

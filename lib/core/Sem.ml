@@ -21,11 +21,13 @@ type node =
   | Query of addr Query.t
   | Link of addr * t option * modifier
   | Xml_tag of xml_resolved_qname * (xml_resolved_qname * t) list * t
+  | Group of delim * t
   | TeX_cs of TeX_cs.t
   | Math of math_mode * t
   | Embed_tex of embedded_tex
   | Img of string
   | Prim of Prim.t * t
+  | Clo of t Env.t * Symbol.t list * Syn.t
   | Object of Symbol.t
   | Ref of addr
   | Sym of Symbol.t
@@ -138,7 +140,10 @@ let string_of_nodes =
     | Xml_tag (_, _, bdy) | Math (_, bdy) -> Some (render bdy)
     | Embed_tex {source; _} -> Some (render source)
     | Prim (_, x) -> Some (render x)
-    | Transclude _ | Subtree _ | Query_tree _ | TeX_cs _ | Img _ | Object _ | Link _ | Ref _ | Query _ | Query_mode _ | Query_polarity _ | Sym _ -> None
+    | Group (d, x) ->
+      let l, r = delim_to_strings d in
+      Some (l ^ render x ^ r)
+    | Transclude _ | Subtree _ | Query_tree _ | TeX_cs _ | Img _ | Object _ | Link _ | Ref _ | Query _ | Query_mode _ | Query_polarity _ | Sym _ | Clo _ -> None
   in
   render
 

@@ -232,6 +232,15 @@ struct
       Reporter.fatalf ?loc:located.loc Resolution_error
         "unresolved control sequence `\\%a`" TeX_cs.pp name
 
+    | Sem.Clo _ ->
+      Reporter.fatal ?loc:located.loc Type_error
+        "tried to compile function closure to XML"
+
+    | Sem.Group (d, xs) ->
+      let l, r = delim_to_strings d in
+      let Content xs = compile_nodes xs in
+      X.Text l :: xs @ [X.Text r]
+
     | Sem.Object _ ->
       Reporter.fatal ?loc:located.loc Type_error
         "tried to compile object closure to XML"

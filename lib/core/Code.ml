@@ -16,6 +16,8 @@ type node =
   | Default of Trie.path * t
   | Get of Trie.path
 
+  | Fun of Trie.path list * t
+
   | Object of {self : Trie.path option; methods : (string * t) list}
   | Patch of {obj : t; self : Trie.path option; methods: (string * t) list}
   | Call of t * string

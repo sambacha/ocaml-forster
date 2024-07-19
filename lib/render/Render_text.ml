@@ -36,6 +36,9 @@ let rec render_node ~trees : Sem.node Range.located -> Printer.t =
     render ~trees x
   | Sem.TeX_cs _ ->
     Printer.nil
+  | Sem.Group (d, x) ->
+    let l, r = delim_to_strings d in
+    Printer.seq [Printer.text l; render ~trees x; Printer.text r]
   | _ ->
     Reporter.fatal ?loc:node.loc Unhandled_case "unhandled case in plain text renderer"
 

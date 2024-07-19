@@ -47,6 +47,9 @@ let rec render_node ~cfg : Sem.node Range.located -> Printer.t =
     Printer.text @@ Format.sprintf "\\%c" x
   | Sem.TeX_cs (Word x) ->
     Printer.text @@ Format.sprintf "\\%s " x
+  | Sem.Group (d, x) ->
+    let l, r = delim_to_strings d in
+    Printer.seq [Printer.text l; render ~cfg x; Printer.text r]
   | node ->
     Reporter.fatalf ?loc:located.loc Type_error "Render_TeX_like: cannot render this kind of object"
 

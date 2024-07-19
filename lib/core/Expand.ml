@@ -124,6 +124,9 @@ let rec expand : Code.t -> Syn.t =
     let k = expand_ident loc k in
     {value = Syn.Get k; loc} :: expand rest
 
+  | {value = Fun (xs, body); loc} :: rest ->
+    expand_lambda loc (xs, body) :: expand rest
+
   | {value = Object {self; methods}; loc} :: rest ->
     let self, methods =
       Scope.section [] @@ fun () ->
@@ -183,12 +186,12 @@ let rec expand : Code.t -> Syn.t =
   | {value = Let (a, bs, def); loc} :: rest ->
     let lam = expand_lambda loc (bs, def) in
     Resolver.Scope.section [] @@ fun _ ->
-    Resolver.Scope.import_singleton a @@ Term lam;
+    Resolver.Scope.import_singleton a @@ Term [lam];
     expand rest
 
   | {value = Def (path, xs, body); loc} :: rest ->
     let lam = expand_lambda loc (xs, body) in
-    Resolver.Scope.include_singleton path @@ Term lam;
+    Resolver.Scope.include_singleton path @@ Term [lam];
     expand rest
 
   | {value = Decl_xmlns (prefix, xmlns); loc} :: rest ->
@@ -204,7 +207,7 @@ let rec expand : Code.t -> Syn.t =
 and expand_method (key, body) =
   key, expand body
 
-and expand_lambda loc : Trie.path list * Code.t -> Syn.t =
+and expand_lambda loc : Trie.path list * Code.t -> Syn.node Range.located =
   fun (xs, body) ->
   Scope.section [] @@ fun () ->
   let syms =
@@ -214,7 +217,7 @@ and expand_lambda loc : Trie.path list * Code.t -> Syn.t =
     Scope.import_singleton x @@ Term [var];
     sym
   in
-  [Range.{value = Syn.Lam (syms, expand body); loc}]
+  Range.{value = Syn.Fun (syms, expand body); loc}
 
 and expand_ident loc path =
   match Scope.resolve path, path with
