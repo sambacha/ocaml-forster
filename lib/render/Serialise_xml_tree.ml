@@ -137,6 +137,8 @@ struct
         ref.taxon |> F.optional_ @@ F.taxon_ "%s";
         ref.number |> F.optional_ @@ F.number_ "%s"
       ]
+    | X.Splice splice ->
+      F.null @@ render_content splice.splice
     | X.Local_link link ->
       F.link [
         F.type_ "local";

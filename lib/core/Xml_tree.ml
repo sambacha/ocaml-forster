@@ -52,8 +52,8 @@ type 'content xml_tag = {
 
 type ref = {
   addr : addr;
-  taxon : string option;
-  number : string option
+  mutable taxon : string option;
+  mutable number : string option
 }
 [@@deriving repr]
 
@@ -89,6 +89,11 @@ type embedded_tex = {
 }
 [@@deriving repr]
 
+type 'content splice = {
+  mutable splice :'content
+}
+[@@deriving repr]
+
 type ('content, 'tree) content_node =
   | Text of string
   | CDATA of string
@@ -102,6 +107,7 @@ type ('content, 'tree) content_node =
   | Img of img
   | Embedded_tex of embedded_tex
   | Info of string
+  | Splice of 'content splice
 [@@deriving repr]
 
 
@@ -164,5 +170,40 @@ type tree_ = Tree of content tree
 and content = Content of (content, tree_) content_node list
 [@@deriving repr]
 
+type content_ = (content, tree_) content_node list
+
 let splice (Content xs) = xs
 let splice_tree (Tree tree) = tree
+
+
+
+let is_whitespace =
+  function
+  | Text txt -> String.trim txt = ""
+  | _ -> false
+
+let trim_whitespace_ xs =
+  let rec trim_front xs =
+    match xs with
+    | x :: xs when is_whitespace x ->
+      trim_front xs
+    | xs -> xs
+  and trim_back xs =
+    List.rev @@ trim_front @@ List.rev xs
+  in
+  trim_back @@ trim_front xs
+
+let trim_whitespace (Content xs) =
+  Content (trim_whitespace_ xs)
+
+let rec extract_text_ : content_ -> string =
+  function
+  | [] -> ""
+  | Text str :: content ->
+    str ^ extract_text_ content
+  | CDATA str :: content ->
+    str ^ extract_text_ content
+  | _ -> ""
+
+let extract_text (Content xs) =
+  String.trim @@ extract_text_ xs

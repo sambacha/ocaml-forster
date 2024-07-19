@@ -34,7 +34,14 @@ let parens(p) == delimited(LPAREN, p, RPAREN)
 let bvar :=
 | x = TEXT; { [x] }
 
-let binder == list(squares(bvar))
+let bvar_with_strictness :=
+| x = TEXT; {
+  match String_util.explode x with
+(*   | '~' :: chars -> Lazy [String_util.implode chars] *)
+  | _ -> Strict [x]
+ }
+
+let binder == list(squares(bvar_with_strictness))
 
 let ws_or(p) :=
 | WHITESPACE; { [] }
@@ -112,7 +119,6 @@ let arg :=
 | braces(textual_expr)
 | located_str = locate(VERBATIM);
   { [{located_str with value = Code.Verbatim located_str.value}] }
-
 
 let txt_arg == braces(wstext)
 let fun_spec == ~ = ident; ~ = binder; ~ = arg; <>

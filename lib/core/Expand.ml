@@ -1,6 +1,7 @@
 open Forester_prelude
 open Resolver
 open Bwd
+open Base
 
 module UnitMap = Map.Make (String)
 
@@ -207,15 +208,16 @@ let rec expand : Code.t -> Syn.t =
 and expand_method (key, body) =
   key, expand body
 
-and expand_lambda loc : Trie.path list * Code.t -> Syn.node Range.located =
+and expand_lambda loc : Trie.path binding list * Code.t -> Syn.node Range.located =
   fun (xs, body) ->
   Scope.section [] @@ fun () ->
   let syms =
-    xs |> List.map @@ fun x ->
-    let sym = Symbol.fresh x in
-    let var = Range.locate_opt None @@ Syn.Var sym in
-    Scope.import_singleton x @@ Term [var];
-    sym
+    xs |> List.map @@ function
+    | Strict x ->
+      let sym = Symbol.fresh x in
+      let var = Range.locate_opt None @@ Syn.Var sym in
+      Scope.import_singleton x @@ Term [var];
+      Strict sym
   in
   Range.{value = Syn.Fun (syms, expand body); loc}
 

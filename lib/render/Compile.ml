@@ -238,7 +238,7 @@ struct
 
     | Sem.Group (d, xs) ->
       let l, r = delim_to_strings d in
-      let Content xs = compile_nodes xs in
+      let X.Content xs = compile_nodes xs in
       X.Text l :: xs @ [X.Text r]
 
     | Sem.Object _ ->

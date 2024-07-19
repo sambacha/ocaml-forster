@@ -31,6 +31,11 @@ module String_map = Map.Make (String)
 type delim = Braces | Squares | Parens
 [@@deriving show]
 
+type 'a binding =
+  | Strict of 'a
+  (* | Lazy of 'a *)
+[@@deriving show]
+
 let delim_to_strings =
   function
   | Braces -> "{", "}"

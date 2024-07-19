@@ -27,7 +27,7 @@ type node =
   | Embed_tex of embedded_tex
   | Img of string
   | Prim of Prim.t * t
-  | Clo of t Env.t * Symbol.t list * Syn.t
+  | Clo of t Env.t * Symbol.t binding list * Syn.t
   | Object of Symbol.t
   | Ref of addr
   | Sym of Symbol.t
