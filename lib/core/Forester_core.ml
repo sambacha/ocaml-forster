@@ -20,5 +20,3 @@ module TeX_cs = TeX_cs
 module Symbol = Symbol
 
 module Xml_tree = Xml_tree
-
-module Refresh = Refresh

@@ -27,7 +27,14 @@ end
 
 module Make () =
 struct
-  module R = Refresh.Make (struct type t = Xml_tree.tree_ Addr_map.t end) ()
+  let refresher_queue = Queue.create ()
+
+  let refresh trees =
+    refresher_queue |> Queue.iter @@ fun f ->
+    f trees
+
+  let observe f =
+    Queue.add f refresher_queue
 
   module Graphs =
   struct
@@ -235,7 +242,7 @@ struct
           number = None;
         }
       in
-      R.observe begin fun trees ->
+      observe begin fun trees ->
         Addr_map.find_opt dest trees |> Option.iter @@ function
         | Xml_tree.Tree tree ->
           ref.number <- tree.frontmatter.number;
@@ -249,7 +256,7 @@ struct
       Graphs.add_edge Q.Rel.links ~source:scope ~target:(User_addr dest);
       let title = Option.map (eval_as_content ?loc:node.loc) title in
       let splice = Xml_tree.{splice = Content []} in
-      R.observe begin fun trees ->
+      observe begin fun trees ->
         splice.splice <-
           match Addr_map.find_opt (User_addr dest) trees with
           | None ->
