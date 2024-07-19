@@ -207,7 +207,6 @@ struct
   module Lex_env' = Algaeff.Reader.Make (struct type t = value Env.t end)
 
   let rec eval =
-    let open Bwd.Infix in
     function
     | [] -> VContent []
     | node :: nodes ->
