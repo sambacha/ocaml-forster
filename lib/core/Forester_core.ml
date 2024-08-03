@@ -28,3 +28,5 @@ module Render_TeX_like = Render_TeX_like
 module Addr_graph = Addr_graph
 module Forester_graphs = Forester_graphs
 module Query_engine = Query_engine
+
+module Xml_tree2 = Xml_tree2
