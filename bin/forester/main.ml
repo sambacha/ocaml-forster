@@ -223,6 +223,15 @@ theme = "theme"                      # The directory in which your theme is stor
   build ~env "forest.toml" true None false false false ;
   Format.printf "%s" "Initialized forest, try editing `trees/index.tree` and running `forester build`. Afterwards, you can open `output/index.xml` in your browser to view your forest.\n"
 
+let repl ~env () =
+  let rec loop () =
+    let s = read_line () in
+    let eval s = s in
+    print_endline (eval s);
+    loop ()
+  in
+  loop ()
+
 let arg_config =
   let doc = "A TOML file like $(i,forest.toml)" in
   Arg.(value & pos 0 file "forest.toml" & info [] ~docv:"FOREST" ~doc)
@@ -347,6 +356,16 @@ let init_cmd ~env =
   let info = Cmd.info "init" ~version ~doc ~man in
   Cmd.v info Term.(const (init ~env) $ const ())
 
+let repl_cmd ~env =
+  let doc = "Start an interactive session" in
+  let man = [
+    `S Manpage.s_description;
+    `P "The $(tname) command starts an interactive REPL session."
+  ]
+  in
+  let info = Cmd.info "repl" ~version ~doc ~man in
+  Cmd.v info Term.(const (repl ~env) $ const ())
+
 let cmd ~env =
   let doc = "a tool for tending mathematical forests" in
   let man = [
@@ -358,7 +377,7 @@ let cmd ~env =
   in
 
   let info = Cmd.info "forester" ~version ~doc ~man in
-  Cmd.group info [build_cmd ~env; new_tree_cmd ~env; complete_cmd ~env; query_cmd ~env; init_cmd ~env;]
+  Cmd.group info [build_cmd ~env; new_tree_cmd ~env; complete_cmd ~env; query_cmd ~env; init_cmd ~env; repl_cmd ~env]
 
 
 let () =
