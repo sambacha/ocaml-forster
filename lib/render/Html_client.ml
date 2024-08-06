@@ -62,7 +62,8 @@ module Make (F : Forest2.S) : S = struct
   let rec render_article (article : T.content T.article) : P.node =
     H.html [] [
       H.head [] [
-        H.meta [H.charset "utf-8"]
+        H.meta [H.charset "utf-8"];
+        H.link [H.rel "stylesheet"; H.href "style.css"]
       ];
       H.body [] [
         H.article [] [
@@ -127,19 +128,16 @@ module Make (F : Forest2.S) : S = struct
   and render_transclusion (transclusion : T.transclusion) : P.node list =
     render_content @@ F.get_content_of_transclusion transclusion
 
+  (* TODO: links need to be flattened in order to produce valid HTML. *)
   and render_link (link : T.content T.link) : P.node list =
     let article_opt = F.get_article @@ User_addr link.href in
-    let href, title_opt =
+    let attrs =
       match article_opt with
-      | None -> link.href, None
+      | None ->
+        [H.href "%s" link.href]
       | Some article ->
-        route article.frontmatter.addr,
-        Option.some @@ PT.string_of_content article.frontmatter.title
-    in
-    let attrs = [
-      H.href "%s" href;
-      match title_opt with Some title -> H.title_ "%s" title | None -> H.null_
-    ]
+        [H.href "%s" @@ route article.frontmatter.addr;
+         H.title_ "%s" @@ PT.string_of_content article.frontmatter.title]
     in
     [ H.a attrs @@ render_content link.content ]
 
