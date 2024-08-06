@@ -36,10 +36,21 @@ struct
     | Content content -> content
     | _ -> Reporter.fatal ?loc:node.loc Type_error "Expected content"
 
+  let coalesce_text =
+    let rec loop acc =
+      function
+      | [] -> Option.some @@ String.concat "" @@ List.rev acc
+      | T.Text txt :: content -> loop (txt :: acc) content
+      | _ -> None
+    in
+    loop []
+
+
   let extract_text (node : located) =
-    match node.value with
-    | Content [Text txt] -> String.trim txt
-    | _ -> Reporter.fatal ?loc:node.loc Type_error "Expected address"
+    let content = extract_content node in
+    match coalesce_text content with
+    | Some txt -> String.trim txt
+    | None -> Reporter.fatalf ?loc:node.loc Type_error "Expected address but got: %a" pp node.value
 
   let extract_query_polarity (x : located) =
     match x.value with
@@ -88,7 +99,6 @@ struct
   module Emitted_trees = Algaeff.State.Make (struct type t = T.content T.article list end)
   module Frontmatter = Algaeff.State.Make (struct type t = T.content T.frontmatter end)
   module Scope = Algaeff.State.Make (Addr)
-  module TeX_like_mode = Algaeff.Reader.Make (struct type t = bool end)
 
   let rec process_tape () =
     match Tape.pop_node_opt () with
@@ -148,7 +158,6 @@ struct
 
     | Math (mode, body) ->
       let content =
-        TeX_like_mode.run ~env:true @@ fun () ->
         {node with value = eval_tape body} |> V.extract_content
       in
       emit_content_node ~loc @@ KaTeX (mode, content)
@@ -242,11 +251,7 @@ struct
       focus ?loc:node.loc @@ V.Query_expr q
 
     | TeX_cs cs ->
-      if TeX_like_mode.read () then
-        emit_content_node ~loc @@ TeX_cs cs
-      else
-        Reporter.fatalf ?loc Resolution_error
-          "Cannot evaluate control sequence `\\%a` outside of TeX-like mode" TeX_cs.pp cs
+      emit_content_node ~loc @@ TeX_cs cs
 
     | Transclude ->
       let addr = User_addr (pop_text_arg ~loc) in
@@ -262,7 +267,6 @@ struct
       in
       let subtree = eval_tree_inner ~addr nodes in
       let frontmatter = Frontmatter.get () in
-      let content = {node with value = eval_tape nodes} |> V.extract_content in
       let subtree = {subtree with frontmatter = {subtree.frontmatter with physical_parent = Some frontmatter.addr; designated_parent = Some frontmatter.addr}} in
       Emitted_trees.modify @@ List.cons subtree;
       emit_content_node ~loc @@ Transclude {addr; target = Full}
@@ -276,9 +280,9 @@ struct
       emit_content_node ~loc @@ Results_of_query query
 
     | Embed_tex ->
-      let preamble = pop_content_arg ~loc in
-      let source = pop_content_arg ~loc in
       let svg_code =
+        let preamble = pop_content_arg ~loc in
+        let source = pop_content_arg ~loc in
         Reporter.with_loc loc @@ fun () ->
         I.latex_to_svg @@ Format.asprintf "%a\n\n%a" T.TeX_like.pp_content preamble T.TeX_like.pp_content source
       in
@@ -526,7 +530,6 @@ struct
     Heap.run ~init:Env.empty @@ fun () ->
     Lex_env.run ~env:Env.empty @@ fun () ->
     Dyn_env.run ~env:Env.empty @@ fun () ->
-    TeX_like_mode.run ~env:false @@ fun () ->
     let tree = eval_tree_inner ~addr tree in
     let emitted = Emitted_trees.get () in
     tree, emitted

@@ -7,7 +7,12 @@ module H = P.HTML
 
 exception Todo
 
-module Make (F : Forest2.S) = struct
+module type S = sig
+  val route : addr -> string
+  val render_article : T.content T.article -> P.node
+end
+
+module Make (F : Forest2.S) : S = struct
 
   module PT = Plain_text_client.Make (F)
   module C = T.Comparators (PT)
@@ -56,10 +61,15 @@ module Make (F : Forest2.S) = struct
 
   let rec render_article (article : T.content T.article) : P.node =
     H.html [] [
-      H.article [] [
-        render_frontmatter article.frontmatter;
-        H.null @@ render_content article.mainmatter;
-        H.section [H.class_ "backmatter"] @@ render_content article.backmatter
+      H.head [] [
+        H.meta [H.charset "utf-8"]
+      ];
+      H.body [] [
+        H.article [] [
+          render_frontmatter article.frontmatter;
+          H.null @@ render_content article.mainmatter;
+          H.section [H.class_ "backmatter"] @@ render_content article.backmatter
+        ]
       ]
     ]
 

@@ -4,23 +4,17 @@ open Forester_core
 module T = Xml_tree2
 module Q = Query
 
-module type S =
-sig
-  type article = T.content T.article
 
-  val plant_article : article -> unit
-  val get_article : addr -> article option
+module type S = sig
+  val plant_article : T.content T.article -> unit
+  val get_article : addr -> T.content T.article option
   val get_content_of_transclusion : T.transclusion -> T.content
-
   val run_query : Query.dbix Query.expr -> Addr_set.t
-
 end
 
 module Make (Graphs : Forester_graphs.S) : S =
 struct
-
   type article = T.content T.article
-
   let articles : (addr, article) Hashtbl.t =
     Hashtbl.create 1000
 
@@ -93,6 +87,13 @@ struct
   let get_article addr =
     Hashtbl.find_opt articles addr
 
+  let get_article_exn addr =
+    match get_article addr with
+    | Some article -> article
+    | None ->
+      Reporter.fatalf Tree_not_found "Could not find tree %a" pp_addr addr
+
+
   module Query_engine = Query_engine.Make (Graphs)
   include Query_engine
 
@@ -100,15 +101,25 @@ struct
   let section_symbol = "§"
 
   let get_content_of_transclusion (transclusion : T.transclusion) =
-    let article = Option.get @@ get_article transclusion.addr in
     match transclusion.target with
-    | Full -> [T.Section (T.article_to_section article)]
-    | Mainmatter -> article.mainmatter
-    | Title -> article.frontmatter.title
+    | Full ->
+      let article = get_article_exn transclusion.addr in
+      [T.Section (T.article_to_section article)]
+    | Mainmatter ->
+      let article = get_article_exn transclusion.addr in
+      article.mainmatter
+    | Title ->
+      begin
+        match get_article transclusion.addr with
+        | None -> [T.Text (Format.asprintf "%a" pp_addr transclusion.addr)]
+        | Some article -> article.frontmatter.title
+      end
     | Taxon ->
+      let article = get_article_exn transclusion.addr in
       let taxon = Option.value ~default:section_symbol article.frontmatter.taxon in
       [T.Text taxon]
     | Number ->
+      let article = get_article_exn transclusion.addr in
       let number =
         match article.frontmatter.number with
         | Some number -> number

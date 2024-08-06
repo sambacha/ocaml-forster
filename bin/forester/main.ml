@@ -1,4 +1,5 @@
 open Eio.Std
+open Forester_prelude
 open Forester_core
 open Forester_frontend
 open Cmdliner
@@ -38,18 +39,25 @@ let build ~env config_filename dev render_only ignore_tex_cache no_assets no_the
     Reporter.profile "parse trees" @@ fun () ->
     Process.read_trees_in_dirs ~dev @@ make_dirs ~env config.trees
   in
-  let forest =
+  let articles =
     Reporter.profile "expand, evaluate, and analyse forest" @@ fun () ->
-    Forest.plant_forest parsed_trees
+    Forest_reader.read_trees ~env parsed_trees
   in
+  let module F = Forester_render.Forest2.Make (Forester_graphs.Make ()) in
   Reporter.profile "render forest" @@ fun () ->
-  let render_only =
-    render_only |>
-    Option.map @@
-    List.map @@ fun addr ->
-    User_addr addr
-  in
-  Forest.render_trees ~cfg:internal_cfg ~forest ~render_only
+
+  articles |> Addr_map.iter (fun _ -> F.plant_article);
+
+  let cwd = Eio.Stdenv.cwd env in
+  Eio_util.ensure_dir_path cwd ["output"];
+
+  let module H = Forester_render.Html_client.Make (F) in
+  begin
+    articles |> Addr_map.iter @@ fun addr article ->
+    let node = H.render_article article in
+    let html = Pure_html.to_string node in
+    Eio.Path.save ~create:(`Or_truncate 0o644) Eio.Path.(cwd / "output" / H.route addr) html
+  end
 
 let new_tree ~env config_filename dest_dir prefix template random =
   let config = Forester_frontend.Config.parse_forest_config_file config_filename in

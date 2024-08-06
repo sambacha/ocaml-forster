@@ -11,6 +11,7 @@ module Code = Code
 module Resolver = Resolver
 module Expand = Expand
 module Eval = Eval
+module Eval2 = Eval2
 module Query = Query
 module BaseN = BaseN
 
