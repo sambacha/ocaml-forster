@@ -8,6 +8,7 @@ module Syn = Syn
 module Sem = Sem
 module Code = Code
 
+module Reps = Reps
 module Resolver = Resolver
 module Expand = Expand
 module Eval = Eval
