@@ -30,7 +30,7 @@
   (ocamlgraph
    (>= 2.1.0))
   (ocaml
-   (>= 5.1.1))
+   (>= 5.2.0))
   dune
   ppx_deriving
   (cmdliner
@@ -64,8 +64,6 @@
    (>= 3.5.0))
   (base64
    (>= 3.5.1))
-  (nottui
-    (>= 0.3))
   (nottui
     (>= 0.3))
   (irmin

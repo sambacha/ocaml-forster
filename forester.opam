@@ -10,7 +10,7 @@ bug-reports: "https://todo.sr.ht/~jonsterling/forester"
 depends: [
   "menhir" {>= "20240715"}
   "ocamlgraph" {>= "2.1.0"}
-  "ocaml" {>= "5.1.1"}
+  "ocaml" {>= "5.2.0"}
   "dune" {>= "3.13"}
   "ppx_deriving"
   "cmdliner" {>= "1.2.0"}
@@ -28,8 +28,6 @@ depends: [
   "ppx_repr" {>= "0.7.0"}
   "uri" {>= "4.4.0"}
   "pure-html" {>= "3.5.0"}
-  "base64" {>= "3.5.1"}
-  "nottui" {>= "0.3"}
   "base64" {>= "3.5.1"}
   "nottui" {>= "0.3"}
   "irmin" {>= "3.9.0"}
