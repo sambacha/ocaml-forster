@@ -6,6 +6,7 @@ module Rel :
 sig
   type t = string
 
+  val t : t Repr.ty
   val links : t
   val transclusion : t
   val authors : t
@@ -34,11 +35,11 @@ type mode =
 
 (** De Bruijn indices for bound variables, counting outward from the innermost binder. *)
 type dbix = int
-[@@deriving show]
+[@@deriving show, repr]
 
 (** Globally unique symbols for free variables. *)
 type name = Symbol.t
-[@@deriving show]
+[@@deriving show, repr]
 
 (** A variable in 'locally nameless' representation is either free or bound. *)
 type lnvar =
@@ -63,6 +64,8 @@ type 'var expr =
   | Union_fam of 'var expr * 'var expr binder
   | Isect_fam of 'var expr * 'var expr binder
 [@@deriving show]
+
+val expr_t : 'a Repr.ty -> 'a expr Repr.ty
 
 val distill_expr : lnvar expr -> dbix expr
 exception Distill of name

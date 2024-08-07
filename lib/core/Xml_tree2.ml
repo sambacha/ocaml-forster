@@ -11,22 +11,22 @@ type xml_qname = {
   xmlns : string option
   (** The XML namespace bound by the current scope to [prefix]. This is not used when serialising to XML, but can be helpful for other analyses. *)
 }
-[@@deriving show]
+[@@deriving show, repr]
 
 type xml_attr = {key : xml_qname; value : string}
-[@@deriving show]
+[@@deriving show, repr]
 
 type 'content xml_elt = {
   name : xml_qname;
   attrs : xml_attr list;
   content : 'content
 }
-[@@deriving show]
+[@@deriving show, repr]
 
 type attribution =
   | Author of string
   | Contributor of string
-[@@deriving show]
+[@@deriving show, repr]
 
 type 'content frontmatter = {
   addr : addr;
@@ -41,20 +41,20 @@ type 'content frontmatter = {
   tags : string list;
   metas : (string * 'content) list
 }
-[@@deriving show]
+[@@deriving show, repr]
 
 type 'content section = {
   frontmatter : 'content frontmatter;
   mainmatter : 'content
 }
-[@@deriving show]
+[@@deriving show, repr]
 
 type 'content article = {
   frontmatter: 'content frontmatter;
   mainmatter: 'content;
   backmatter: 'content;
 }
-[@@deriving show]
+[@@deriving show, repr]
 
 type content_target =
   | Full
@@ -63,30 +63,30 @@ type content_target =
   | Taxon
   | Number
   (** TODO: when we support automatic subtree numbering *)
-[@@deriving show]
+[@@deriving show, repr]
 
 type transclusion = {
   addr : addr;
   target : content_target
 }
-[@@deriving show]
+[@@deriving show, repr]
 
 type 'content link = {
   href : string;
   content : 'content
 }
-[@@deriving show]
+[@@deriving show, repr]
 
 type inline_img = {
   format : string;
   base64 : string
 }
-[@@deriving show]
+[@@deriving show, repr]
 
 type img =
   | Inline of inline_img
   | Remote of string
-[@@deriving show]
+[@@deriving show, repr]
 
 type content_node =
   | Text of string
@@ -100,10 +100,10 @@ type content_node =
   | TeX_cs of TeX_cs.t
   | Link of content link
   | Img of img
-[@@deriving show]
+[@@deriving show, repr]
 
 and content = content_node list
-[@@deriving show]
+[@@deriving show, repr]
 
 let is_whitespace node =
   match node with

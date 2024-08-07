@@ -1,6 +1,8 @@
 (library
  (name Forester_prelude)
  (libraries unix str ptime eio uucp bwd)
+ (preprocess
+  (pps ppx_repr))
  (public_name forester.prelude))
 
 (env

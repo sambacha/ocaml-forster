@@ -1,4 +1,5 @@
-type t = Trie.path * int
+type t = (Trie.path [@repr Repr.(list string)]) * int
+[@@deriving repr]
 
 let counter = ref 0
 

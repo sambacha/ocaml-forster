@@ -1,5 +1,5 @@
 type t
-[@@deriving show]
+[@@deriving show, repr]
 
 val fresh : Trie.path -> t
 val clone : t -> t
