@@ -9,7 +9,7 @@
  (name Forester_frontend)
  (public_name forester.frontend)
  (preprocess
-  (pps ppx_deriving.show))
+  (pps ppx_deriving.show ppx_deriving.ord))
  (libraries
   bwd
   forester.prelude
@@ -21,7 +21,11 @@
   str
   toml
   pure-html
-  yuujinchou))
+  yuujinchou
+  nottui
+  irmin
+  irmin-fs.unix
+  irmin-git.unix))
 
 (env
  (dev

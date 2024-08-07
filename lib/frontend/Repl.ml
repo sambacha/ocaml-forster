@@ -1,5 +1,4 @@
 open Forester_core
-open Nottui
 
 type command_error = string
 type command = Quit | Edit of addr | Help | Nop
