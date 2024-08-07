@@ -1,27 +1,23 @@
-(ocamllex Lexer)
+(ocamllex Cli_lexer)
 
 (menhir
- (modules Grammar)
+ (modules Parser)
  (explain true)
  (flags --inspection --table --dump))
 
 (library
- (name Forester_frontend)
- (public_name forester.frontend)
+ (name Forester_ui)
+ (public_name forester.ui)
  (preprocess
-  (pps ppx_deriving.show ppx_deriving.ord))
+   (pps ppx_deriving.show))
  (libraries
   bwd
   forester.prelude
   forester.core
   forester.render
+  forester.frontend
+  nottui
   menhirLib
-  ocamlgraph
-  eio_main
-  str
-  toml
-  pure-html
-  yuujinchou
   irmin
   irmin-fs.unix
   irmin-git.unix))
