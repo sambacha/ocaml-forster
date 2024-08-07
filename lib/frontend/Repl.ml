@@ -1,4 +1,9 @@
 open Forester_core
+open Lwd_infix
+open Notty
+open Nottui_widgets
+open Nottui
+open Lwd
 
 type command_error = string
 type command = Quit | Edit of addr | Help | Nop
@@ -8,15 +13,13 @@ type history_item = input * command_result
 type command_history = history_item list
 
 let prompt ~prompt_label =
-  let open Notty in
   [
-    Notty.I.strf "%s" prompt_label |> Nottui.Ui.atom |> Lwd.return;
-    Notty.I.string A.(fg green) "❯ " |> Nottui.Ui.atom |> Lwd.return;
+    I.strf "%s" prompt_label |> Ui.atom |> Lwd.return;
+    I.string A.(fg green) "❯ " |> Ui.atom |> Lwd.return;
   ]
-  |> Nottui_widgets.hbox
+  |> hbox
 
-let input ~last_command ~prompt_label ~focus_handle ~f : Nottui.ui Lwd.t =
-  let open Notty in
+let input ~last_command ~prompt_label ~focus_handle ~f : ui Lwd.t =
   let edit_field = Lwd.var ("", 0) in
   let caret_color =
     match last_command with
@@ -24,39 +27,39 @@ let input ~last_command ~prompt_label ~focus_handle ~f : Nottui.ui Lwd.t =
     | Some (Error _) -> A.red
     | None -> A.green
   in
-  Nottui_widgets.hbox
+  hbox
     [
       prompt ~prompt_label;
-      Nottui_widgets.hbox
+      hbox
       @@ [
            Nottui_widgets.edit_field (Lwd.get edit_field) ~focus:focus_handle
-             ~on_change:(fun (text, x) -> Lwd.set edit_field (text, x))
+             ~on_change:(fun (text, x) -> edit_field $= (text, x))
              ~on_submit:(fun _ ->
                let s = fst @@ Lwd.peek edit_field in
                if s <> "" then (
                  f s;
-                 Lwd.set edit_field ("", 0)));
+                 edit_field $= ("", 0)));
          ];
     ]
 
-let render_cmd_history : command_history -> Nottui.ui Lwd.t =
+let render_cmd_history : command_history -> ui Lwd.t =
  fun items ->
   items
   |> List.map (fun item ->
-         Nottui_widgets.vbox
+         vbox
            [
-             Nottui_widgets.hbox
+             hbox
                [
                  prompt ~prompt_label:"Forest";
-                 Lwd.return @@ Nottui_widgets.string (item |> fst);
+                 Lwd.return @@ string (item |> fst);
                ];
-             Nottui_widgets.string
+             string
                (item |> snd |> function
                 | Ok (command, output) -> output
                 | Error _ -> Format.sprintf "unrecognized command %s" (fst item))
              |> Lwd.return;
            ])
-  |> List.rev |> Nottui_widgets.vbox
+  |> List.rev |> vbox
 
 let parse_input (i : string) : (command, string) Result.t =
   if i = "quit" then Ok Quit
@@ -65,16 +68,15 @@ let parse_input (i : string) : (command, string) Result.t =
   else Error "unhandled"
 
 let run () =
-  let open Nottui in
   let quit = Lwd.var false in
 
   let history = Lwd.var ([] : command_history) in
 
-  let focus_handle = Nottui.Focus.make () in
+  let focus_handle = Focus.make () in
   let prompt_label = "Forest" in
   let update_history (item : history_item) =
     let h = Lwd.peek history in
-    Lwd.set history (item :: h)
+    history $= item :: h
   in
   let on_receive_input i =
     let res = parse_input i in
@@ -89,7 +91,7 @@ let run () =
       | Nop ->
           let o = "" in
           update_history (i, Ok (cmd, o))
-      | Quit -> Lwd.set quit true
+      | Quit -> quit $= true
     in
     match res with
     | Ok cmd -> handle cmd
