@@ -1,5 +1,4 @@
 open Forester_core
-
 module Store = Irmin_defs
 open Store
 
@@ -57,6 +56,14 @@ and process_dir dir =
 let scan_directories dirs =
   S.run @@ fun () -> dirs |> List.iter @@ fun fp -> process_dir fp
 
+let addr_of_path_exn segments =
+  List.rev segments |> List.hd |> fun str -> User_addr str
+
+let addr_of_path_opt segments =
+  match segments with
+  | [] -> None
+  | segs -> List.rev segs |> List.hd |> fun str -> Some (User_addr str)
+
 let addr_of_fs_path : Eio.Fs.dir_ty Eio.Path.t -> addr =
  fun path ->
   match Eio.Path.split path with
@@ -66,16 +73,19 @@ let addr_of_fs_path : Eio.Fs.dir_ty Eio.Path.t -> addr =
         Eio.Path.pp path
   | Some (_, base) -> User_addr (Filename.chop_extension base)
 
+(* HACK: *)
+let store_path_of_addr addr = [ "values"; Format.asprintf "%a" pp_addr addr ]
+
 let store_path_of_content : forest_content -> Store.Path.t = function
   | Value tree -> (
       match tree.addr with
       | Some addr -> [ "values"; addr ]
       | None -> Reporter.fatalf Internal_error "tree has no address")
-  | Artifact article ->
+  | Artifact article -> (
       match article with
-      | { frontmatter = { addr ; _ }; _ } -> [ "artifacts"; Format.asprintf "%a" pp_addr addr ]
+      | { frontmatter = { addr; _ }; _ } ->
+          [ "artifacts"; Format.asprintf "%a" pp_addr addr ])
 
-(* let store_path_of_path p = p |> addr_of_fs_path |> store_path_of_addr *)
 let user_addr addr = User_addr addr
 
 let pp_store_path ppf segments =
@@ -159,9 +169,10 @@ let get_value_opt (addr : addr) cache =
 
 let update_value path cache =
   match get_status path cache with
-  | (Unchanged, _) -> Ok ()
-  | (Changed, tree) ->
-      Reporter.tracef "when updating %a" pp_store_path (store_path_of_content (Value tree))
+  | Unchanged, _ -> Ok ()
+  | Changed, tree ->
+      Reporter.tracef "when updating %a" pp_store_path
+        (store_path_of_content (Value tree))
       @@ fun () ->
       let v = Value tree in
       let path = store_path_of_content v in
@@ -189,11 +200,54 @@ let set_artifact (tree : Xml_tree2.content Xml_tree2.article) cache =
         ~info:(Store_info.v "Todo: commit info for store access")
         cache path (Artifact tree)
 
+let persist_addr_map map cache =
+  Addr_map.iter
+    (fun _ xml ->
+      let _ = set_artifact xml cache in
+      ())
+    map
+
+let get_artifacts (cache : Irmin_defs.Store.t) :
+    Xml_tree2.content Xml_tree2.article Addr_map.t =
+  let open Irmin_defs in
+  let path = [ "artifacts" ] in
+  let tree = Store.find_tree cache path in
+  (* FIXME: This function fails *)
+  let fold tree =
+    let contents path c acc =
+      let addr = path |> addr_of_path_exn in
+      let content =
+        c |> function
+        | Artifact content -> Some content
+        | Value _ ->
+            Reporter.emitf Internal_error
+              "got value when looking up path %a. This should never hhappen."
+              pp_store_path path;
+            None
+      in
+      match content with Some c -> Addr_map.add addr c acc | None -> acc
+    in
+    Store.Tree.fold ~order:`Sorted ~contents tree Addr_map.empty
+  in
+  match tree with Some tree -> fold tree | None -> Addr_map.empty
+
 let iter cache =
   let repo = Store.repo cache in
   let main = Store.main repo in
   Store.Repo.iter repo ~min:[] ~max:[]
 
+let codes cache dirs =
+  let addrs =
+    Path_sequencer.scan_directories dirs
+    |> List.of_seq |> List.map addr_of_fs_path
+  in
+  List.fold_right
+    (fun addr (acc : Code.tree list) ->
+      match Store.find cache (store_path_of_addr addr) with
+      | Some (Value content) -> content :: acc
+      | None -> acc
+      | _ -> acc)
+    addrs []
 (*
 let write_artifact_to_file (addr : addr) fmt =
   let module Serialize =
@@ -221,7 +275,8 @@ let update_values cache =
     |> fun (errs, _) -> match errs with [] -> Ok () | _ :: _ -> Error errs
 
 let status dirs cache : (status * Code.tree) list =
-  scan_directories dirs |> List.of_seq |> List.map (fun path -> get_status path cache)
+  scan_directories dirs |> List.of_seq
+  |> List.map (fun path -> get_status path cache)
 
 let changed_trees trees cache =
   trees
@@ -236,7 +291,9 @@ let read_changed_trees dirs cache =
        | Unchanged, _ -> None)
 
 let trees_to_reevaluate dirs cache =
-  let changed_trees, unchanged_trees = status dirs cache |> partition_by_status in
+  let changed_trees, unchanged_trees =
+    status dirs cache |> partition_by_status
+  in
   let dependency_graph =
     Import_graph.build_import_graph (changed_trees @ unchanged_trees)
     |> Oper.transitive_closure
