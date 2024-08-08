@@ -16,11 +16,12 @@
   forester.core
   forester.render
   forester.frontend
-  nottui
   menhirLib
   irmin
   irmin-fs.unix
-  irmin-git.unix))
+  irmin-git.unix
+  unix
+  linenoise))
 
 (env
  (dev

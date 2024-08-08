@@ -24,7 +24,8 @@
   yuujinchou
   irmin
   irmin-fs.unix
-  irmin-git.unix))
+  irmin-git.unix
+  pretty_expressive))
 
 (env
  (dev
