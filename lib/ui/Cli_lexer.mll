@@ -8,7 +8,6 @@
 let wschar = [' ' '\t']
 let whitespace = wschar+
 
-let addr = [^ ' ' '%' '#' '\\' '{' '}' '[' ']' '(' ')' '\r' '\n']+
 let text = [^ ' ' '%' '#' '\\' '{' '}' '[' ']' '(' ')' '\r' '\n']+
 
 rule skip_whitespace kont =
@@ -17,11 +16,12 @@ rule skip_whitespace kont =
 
 and token =
   parse
-  | "edit" { Parser.EDIT }
-  | "view" { Parser.VIEW }
-  | "help" { Parser.HELP }
-  | "quit" { Parser.QUIT }
+  | "edit" { Parser.EDIT  }
+  | "view" { Parser.VIEW  }
+  | "help" { Parser.HELP  }
+  | "quit" { Parser.QUIT  }
+  | "ls"   { Parser.LS    }
   | wschar { token lexbuf }
-  | text  { Parser.TEXT (lexeme lexbuf)}
-  | eof { EOF }
+  | text   { Parser.TEXT (lexeme lexbuf)}
+  | eof    { EOF }
   | _ { raise @@ Syntax_error (lexeme lexbuf)}
