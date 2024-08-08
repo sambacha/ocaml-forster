@@ -1,7 +1,6 @@
 open Forester_core
 open Forester_render
 open Forester_frontend
-open Lwd_infix
 
 module Cache_handle = Algaeff.State.Make (struct
   type t = Irmin_defs.Store.t
@@ -14,7 +13,7 @@ let parse str : (Command.t, Command.error) Result.t =
   let lexbuf = Lexing.from_string str in
   try Ok (Parser.main Cli_lexer.token lexbuf) with
   | Cli_lexer.Syntax_error tok ->
-      (* I don't know of an easy way to integrate diagnostics reporting with Nottui, see
+      (* The reporter is currently not able to open stdout, so displaying diagnostics fails
          https://github.com/RedPRL/asai/issues/150
       *)
       Reporter.emitf ~loc:(Range.of_lexbuf lexbuf) Parse_error
@@ -31,7 +30,7 @@ let setup_cache ~env =
   let repo = Irmin_defs.Store.Backend.Repo.v cache_config in
   Irmin_defs.Store.main repo
 
-let handle ~input ~quit =
+let handle ~input =
   let cache = Cache_handle.get () in
   let cmd = parse input in
   match cmd with
@@ -41,33 +40,23 @@ let handle ~input ~quit =
           let tree = Cache.get_value_opt addr cache in
           match tree with
           | Some tree ->
-              (* let o = Components.render_source tree in *)
-              (* Code.show tree.code |> Widget.string |> Lwd.return in *)
-              let o = Code.show tree.code in
-              print_endline o;
+              let o =
+                Formatter.P.pretty_format @@ Formatter.format_code tree.code
+              in
               (input, o)
           | None ->
-              let err =
-                Command.Tree_not_found addr |> Command.show_error
-                (* Command.Tree_not_found addr |> Components.render_error *)
-                (* |> Lwd.return *)
-              in
+              let err = Command.Tree_not_found addr |> Command.show_error in
               (input, err))
       | View addr -> (
           let tree = Cache.get_artifact_opt addr cache in
           match tree with
           | Some tree ->
               let o =
-                (* Render_tui.render_article tree *)
-                (* Widget.string *)
                 Format.asprintf "%a" Xml_tree2.(pp_article pp_content) tree
               in
               (input, o)
           | None ->
-              let err =
-                Command.Tree_not_found addr |> Command.show_error
-                (* |> Components.render_error |> Lwd.return *)
-              in
+              let err = Command.Tree_not_found addr |> Command.show_error in
               (input, err))
       | Help -> (input, "TODO: implement help")
       | Ls ->
@@ -76,12 +65,9 @@ let handle ~input ~quit =
           let trees =
             Addr_map.fold (fun addr content acc -> content :: acc) map []
           in
-          (* let rows = Components.forest_summary trees in *)
           (input, "TODO: implement ls")
       | Nop -> (input, "")
-      | Quit ->
-          quit $= true;
-          (input, ""))
+      | Quit -> exit 0)
   | Error err -> (input, Command.show_error err)
 
 let rec user_input prompt cb =
@@ -97,7 +83,6 @@ let run ~env ~config_file =
   let config = Config.parse_forest_config_file config_file in
   let tree_dirs = make_dirs ~env Config.Forest_config.(config.trees) in
   let cache = setup_cache ~env in
-  let quit = Lwd.var false in
   Cache_handle.run ~init:cache @@ fun () ->
   let _ = Cache.update_values cache tree_dirs in
   let forest = Forest_reader.read_trees ~env @@ Cache.codes cache tree_dirs in
@@ -110,8 +95,6 @@ let run ~env ~config_file =
           ( " <this is the remote name> <this is the remote URL>",
             LNoise.Yellow,
             true ));
-  (* LNoise.history_load ~filename:"history.txt" |> ignore; *)
-  (* LNoise.history_set ~max_length:100 |> ignore; *)
   LNoise.set_completion_callback (fun line_so_far ln_completions ->
       if line_so_far <> "" && line_so_far.[0] = 'h' then
         [ "Hey"; "Howard"; "Hughes"; "Hocus" ]
@@ -127,15 +110,6 @@ let run ~env ~config_file =
   |> List.iter print_endline;
   (fun input ->
     let update_history _ = () in
-    let res = handle ~input ~quit in
-    Printf.sprintf "%s" (snd res) |> print_endline
-    (* if from_user = "quit" then exit 0; *)
-    (* LNoise.history_add from_user |> ignore; *)
-    (* LNoise.history_save ~filename:"history.txt" |> ignore; *)
-    (* Printf.sprintf "Got: %s" from_user |> print_endline *))
+    let res = handle ~input in
+    Printf.sprintf "%s" (snd res) |> print_endline)
   |> user_input "forest❯ "
-
-(*
-  Nottui.Ui_loop.run ~quit_on_ctrl_q:true ~quit_on_escape:false ~quit
-    (Components.root ~quit ~handle)
-    *)
