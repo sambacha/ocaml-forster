@@ -64,11 +64,11 @@
    (>= 3.5.0))
   (base64
    (>= 3.5.1))
-  (nottui
-    (>= 0.3))
   (irmin
     (>= 3.9.0))
   (irmin-fs
     (>= 3.9.0))
   (irmin-git
-    (>= 3.9.0))))
+    (>= 3.9.0))
+  pretty_expressive
+  linenoise))
