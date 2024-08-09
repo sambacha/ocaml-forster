@@ -55,8 +55,8 @@ let handle ~input ~env ~renderer =
       | View addr -> (
           let tree = Cache.get_artifact_opt addr cache in
           match tree with
-          | Some tree ->
-              Format.asprintf "%a" Xml_tree2.(pp_article pp_content) tree
+          | Some { frontmatter; mainmatter; backmatter } ->
+              Format.sprintf "%s" (renderer mainmatter)
           | None ->
               let err = Command.Tree_not_found addr |> Command.show_error in
               Format.sprintf "%s" err)
@@ -64,20 +64,20 @@ let handle ~input ~env ~renderer =
       | Update ->
           let config = Config_handle.get () in
           let cache = Cache_handle.read () in
-          let changed =
-            Cache.read_changed_trees (make_dirs ~env config.trees) cache
+          let dirs = make_dirs ~env config.trees in
+          let reval =
+            Cache.trees_to_reevaluate dirs cache
+            |> Addr_map.to_list |> List.map snd
+            |> Forest_reader.read_trees ~env
           in
-          let o =
-            changed
-            |> List.map (fun Code.{ source_path; addr; code } ->
-                   match addr with
-                   | None -> "anonymous tree has changed"
-                   | Some addr -> Format.asprintf "%s has changed" addr)
-          in
-          let _ = List.map (fun tree -> Cache.set_value tree cache) changed in
-          if List.length o = 0 then "all trees are up to date."
+          let _ = Cache.set_artifact_map reval cache in
+
+          if Addr_map.cardinal reval = 0 then "all trees are up to date."
           else
-            Format.asprintf "%a" (Format.pp_print_list Format.pp_print_string) o
+            Format.asprintf "The following trees were updated:\n%a"
+              (Format.pp_print_list Format.pp_print_string)
+              (reval |> Addr_map.to_list
+              |> List.map (fun (addr, _) -> Format.asprintf "%a" pp_addr addr))
       | Ls ->
           let map = Cache.get_artifacts cache in
 
@@ -138,18 +138,15 @@ let forester_logo =
   let banner str = str |> bold |> green |> clear in
   let logo =
     [
-      {|   __                    _            |};
-      {|  / _| ___  _ __ ___ ___| |_ ___ _ __ |};
-      {| | |_ / _ \| '__/ _ / __| __/ _ | '__||};
-      {| |  _| (_) | | |  __\__ | ||  __| |   |};
-      {| |_|  \___/|_|  \___|___/\__\___|_|   |};
-      "";
+      {| .-,--'                .           |};
+      {|  \|__ ,-. ,-. ,-. ,-. |- ,-. ,-.  |};
+      {|   |   | | |   |-' `-. |  |-' |    |};
+      {|  `'   `-' '   `-' `-' `' `-' '    |};
     ]
   in
   List.map banner logo
 
 let run ~env ~config_file =
-  (* LNoise.set_multiline true; *)
   let config = Config.parse_forest_config_file config_file in
   let tree_dirs = make_dirs ~env Config.Forest_config.(config.trees) in
   let cache = setup_cache ~env in
@@ -157,35 +154,19 @@ let run ~env ~config_file =
   Config_handle.run ~init:config @@ fun () ->
   let _ = Cache.update_values cache tree_dirs in
   let forest = Forest_reader.read_trees ~env @@ Cache.codes cache tree_dirs in
-  let _ = Cache.persist_addr_map forest cache in
+  let _ = Cache.set_artifact_map forest cache in
   let module G = Forester_graphs.Make () in
   let module F = Forest2.Make (G) in
   let module Client = Plain_text_client.Make (F) in
   LNoise.catch_break true;
-  LNoise.set_hints_callback (fun line ->
-      if line <> "git remote add " then None
-      else
-        Some
-          ( " <this is the remote name> <this is the remote URL>",
-            LNoise.Yellow,
-            true ));
-  (* LNoise.history_load ~filename:"history.txt" |> ignore; *)
-  (* LNoise.history_set ~max_length:100 |> ignore; *)
-  LNoise.set_completion_callback (fun line_so_far ln_completions ->
-      if line_so_far <> "" && line_so_far.[0] = 'h' then
-        [ "Hey"; "Howard"; "Hughes"; "Hocus" ]
-        |> List.iter (LNoise.add_completion ln_completions));
   forester_logo |> List.iter print_endline;
   try
     (fun from_user ->
       if from_user = "quit" then exit 0;
       LNoise.history_add from_user |> ignore;
-      LNoise.history_save ~filename:"history.txt" |> ignore;
+      LNoise.history_save ~filename:".foresterHistory" |> ignore;
       handle ~env ~input:from_user ~renderer:Client.string_of_content
-      |> print_endline
-      (* Printf.sprintf "Got: %s" *)
-      (*   (snd (handle ~input:from_user ~renderer:Client.string_of_content)) *)
-      (* |> print_endline *))
+      |> print_endline)
     (* LNoise can't handle non-ascii chars in the prompt...*)
     |> user_input "forest> "
   with Sys.Break ->
