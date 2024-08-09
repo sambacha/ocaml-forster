@@ -2,6 +2,7 @@
 %token HELP
 %token QUIT
 %token LS
+%token UPDATE
 %token <string> TEXT
 %token EOF
 
@@ -15,6 +16,7 @@ let command :=
   | LS; { Command.Ls }
   | QUIT; { Command.Quit }
   | HELP; { Command.Help }
+  | UPDATE; { Command.Update }
 
 let addr :=
   | id = text; { User_addr id }

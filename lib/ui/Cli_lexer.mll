@@ -21,6 +21,7 @@ and token =
   | "help" { Parser.HELP  }
   | "quit" { Parser.QUIT  }
   | "ls"   { Parser.LS    }
+  | "update" {Parser.UPDATE}
   | wschar { token lexbuf }
   | text   { Parser.TEXT (lexeme lexbuf)}
   | eof    { EOF }

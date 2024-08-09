@@ -1,6 +1,6 @@
 open Forester_core
 
-type t = Quit | Edit of addr | View of addr | Ls | Help | Nop
+type t = Quit | Edit of addr | View of addr | Ls | Help | Nop | Update
 [@@deriving show]
 
 type error =
