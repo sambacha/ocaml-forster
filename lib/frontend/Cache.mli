@@ -37,10 +37,6 @@ val pp_store_path : Format.formatter -> string list -> unit
 val pp_path : [> Eio__.Fs.dir_ty ] Eio.Path.t Fmt.t
 val has_tree_changed : Code.tree -> Store.t -> status
 val compare_addr : 'a -> 'a -> int
-
-type stat_addr = status * addr
-
-val compare_stat_addr : stat_addr -> stat_addr -> Ppx_deriving_runtime.int
 val partition_by_status : (status * 'a) list -> 'a list * 'a list
 val get_status : Fs.dir_ty Path.t -> Store.t -> status * Code.tree
 val has_file_changed : Fs.dir_ty Path.t -> Store.t -> status
@@ -50,6 +46,9 @@ val get_value_opt : addr -> Store.t -> Code.tree option
 
 val update_value :
   Fs.dir_ty Path.t -> Store.t -> (unit, Store.write_error) result
+
+val update_values :
+  Store.t -> Fs.dir_ty Path.t list -> (unit, Store.write_error list) result
 
 val get_artifact : addr -> Store.t -> Xml_tree2.content Xml_tree2.article
 
@@ -65,17 +64,16 @@ val set_artifact :
   (unit, Store.write_error) result
 
 val iter : Store.t -> unit
-
-val update_values :
-  Store.t -> Fs.dir_ty Path.t list -> (unit, Store.write_error list) result
-
 val status : Fs.dir_ty Path.t list -> Store.t -> (status * Code.tree) list
 val changed_trees : Code.tree list -> Store.t -> Code.tree list
 val read_changed_trees : Fs.dir_ty Path.t list -> Store.t -> Code.tree list
-val trees_to_reevaluate : Fs.dir_ty Path.t list -> Store.t -> Addr_set.t
+
+val trees_to_reevaluate :
+  Fs.dir_ty Path.t list -> Store.t -> Code.tree Addr_map.t
+
 val trees_to_rerender : Fs.dir_ty Path.t list -> Addr_set.t
 
-val persist_addr_map :
+val set_artifact_map :
   Xml_tree2.content Xml_tree2.article Addr_map.t -> Irmin_defs.Store.t -> unit
 
 val codes : Irmin_defs.Store.t -> Fs.dir_ty Path.t list -> Code.tree list

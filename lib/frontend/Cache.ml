@@ -140,13 +140,6 @@ let get_status path cache =
   (has_tree_changed tree cache, tree)
 
 let has_file_changed path cache = get_status path cache |> fst
-(*
-  let fresh_hash = Cache.Backend.Contents.Hash.hash @@ Value tree in
-  match Cache.hash cache store_path with
-  | Some stored_hash ->
-      if stored_hash = fresh_hash then Unchanged tree else Changed tree
-  | None -> Changed tree
-*)
 
 let set_value tree cache =
   let v = Value tree in
@@ -173,10 +166,7 @@ let update_value path cache =
   | Changed, tree ->
       Reporter.tracef "when updating %a" pp_store_path
         (store_path_of_content (Value tree))
-      @@ fun () ->
-      let v = Value tree in
-      let path = store_path_of_content v in
-      Store.set ~info:(info "foo") cache path v
+      @@ fun () -> set_value tree cache
 
 let get_artifact (addr : addr) cache =
   let path = [ "artifacts"; Format.asprintf "%a" pp_addr addr ] in
@@ -200,7 +190,7 @@ let set_artifact (tree : Xml_tree2.content Xml_tree2.article) cache =
         ~info:(Store_info.v "Todo: commit info for store access")
         cache path (Artifact tree)
 
-let persist_addr_map map cache =
+let set_artifact_map map cache =
   Addr_map.iter
     (fun _ xml ->
       let _ = set_artifact xml cache in
@@ -212,7 +202,6 @@ let get_artifacts (cache : Irmin_defs.Store.t) :
   let open Irmin_defs in
   let path = [ "artifacts" ] in
   let tree = Store.find_tree cache path in
-  (* FIXME: This function fails *)
   let fold tree =
     let contents path c acc =
       let addr = path |> addr_of_path_exn in
@@ -248,18 +237,6 @@ let codes cache dirs =
       | None -> acc
       | _ -> acc)
     addrs []
-(*
-let write_artifact_to_file (addr : addr) fmt =
-  let module Serialize =
-    Forester_render.Serialise_xml_tree.Make
-      (struct
-        let root = None
-      end)
-      ()
-  in
-  let tree = get_artifact addr in
-  Serialize.pp fmt tree
-*)
 
 (* TODO: rename to update_inputs or something *)
 let update_values cache =
@@ -290,25 +267,45 @@ let read_changed_trees dirs cache =
        | Changed, tree -> Some tree
        | Unchanged, _ -> None)
 
+(* Returns the set of dependents of addr, including addr*)
+let dependents addr graph =
+  Import_graph.Gph.fold_succ Addr_set.add graph addr (Addr_set.singleton addr)
+
+(* TODO: Take a long hard look at this.*)
 let trees_to_reevaluate dirs cache =
-  let changed_trees, unchanged_trees =
-    status dirs cache |> partition_by_status
+  let trees, tree_map =
+    List.fold_right
+      (fun ((status, tree) as stat) (changed, map) ->
+        let map =
+          match tree with
+          | Code.{ source_path; addr = Some a; code } ->
+              Addr_map.add (User_addr a) tree map
+          | _ -> map
+        in
+        let list = stat :: changed in
+        (list, map))
+      (status dirs cache) ([], Addr_map.empty)
   in
   let dependency_graph =
-    Import_graph.build_import_graph (changed_trees @ unchanged_trees)
+    Import_graph.build_import_graph (trees |> List.map snd)
     |> Oper.transitive_closure
   in
-  let dependents addr =
-    Import_graph.Gph.fold_succ Addr_set.add dependency_graph addr Addr_set.empty
-  in
-  let changed_addrs =
-    List.filter_map
-      (fun tree -> Option.map user_addr Code.(tree.addr))
-      changed_trees
+  let changed_trees =
+    trees
+    |> List.filter_map (fun (status, tree) ->
+           match status with Changed -> Some tree | _ -> None)
   in
   List.fold_left
-    (fun trees addr -> Addr_set.union (dependents addr) trees)
-    Addr_set.empty changed_addrs
+    (fun trees tree ->
+      let addr = Option.map user_addr Code.(tree.addr) in
+      let deps =
+        Option.map (fun addr -> dependents addr dependency_graph) addr
+      in
+      match deps with
+      | Some deps ->
+          Addr_map.filter (fun addr tree -> Addr_set.mem addr deps) tree_map
+      | None -> Addr_map.empty)
+    Addr_map.empty changed_trees
 
 (* TODO: Here I would need to look up the set of trees with queries that match
    an addr in `reval`.
